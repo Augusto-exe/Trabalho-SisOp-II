@@ -1,2 +1,4 @@
 clienteTCP
 servidorTCP
+*.out
+.vscode

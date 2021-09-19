@@ -66,6 +66,7 @@ int main(int argc, char *argv[])
     bzero(buffer,256);
 	
 	/* read from the socket */
+	printf("sock_read:%d\n",sockfd);
     n = read(sockfd, buffer, 256);
     if (n < 0) 
 		printf("ERROR reading from socket\n");

@@ -2,19 +2,86 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h> 
+#include <sys/types.h>
+#include <pthread.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <unistd.h>
+#include <iostream>
+#include <cstdlib>
+#include <signal.h>
+#include "common.h"
 
 #define PORT 4000
 
-typedef struct __packet{
-    uint16_t type; //Tipo do pacote (p.ex. DATA | CMD)
-    uint16_t seqn; //Número de sequência
-    uint16_t length; //Comprimento do payload
-    uint16_t timestamp; // Timestamp do dado
-    char _payload [256]; //Dados da mensagem
-} packet;
+bool connected = true;
+
+void* thread_read_client(void* socket){
+	
+	int n, localsockfd, *newsockfd = (int*)socket;
+	localsockfd = *newsockfd;
+
+	packet pkt;
+	while(connected)
+	{
+		/* read from the socket */
+		n = read(localsockfd, &pkt, sizeof(pkt));
+		if (n < 0) 
+			printf("ERROR reading from socket");
+
+			printf("type: %d\n", pkt.type);
+			printf("socket: %d\n",localsockfd);
+			printf("seqn: %d\n", pkt.seqn);
+			printf("length: %d\n", pkt.length);
+			printf("timestamp: %d\n", pkt.timestamp);
+			printf("payload: %s\n", pkt._payload);
+		switch(pkt.type)
+		{
+			case(TIPO_DISC):
+				printf("\nUser loged out.\n");
+				connected = false;
+				break;
+			case(TIPO_SEND):
+				break;
+			case (TIPO_LOGIN):
+				printf("\nUser %s loged in.\n", pkt._payload);
+				break;
+			case(TIPO_FOLLOW):
+				break;
+			default:
+				break;
+		}
+			
+	}
+
+	close(localsockfd);
+}
+
+void* thread_write_client(void* socket){
+	
+	int n=1, localsockfd, *newsockfd = (int*)socket;
+	localsockfd = *newsockfd;
+
+	while(connected)
+	{
+		if(false){//needsToSend(user))
+			packet pkt;
+			//pkt = consume(user);
+			pkt.type = 1;
+			pkt.seqn = 2;
+			pkt.length = strlen(pkt._payload);
+			pkt.timestamp = std::time(0);;
+			n = write(localsockfd,&pkt, sizeof(pkt));
+
+			if (n < 0) 
+				printf("ERROR writing to socket");
+		}
+		
+		sleep(2);
+	}
+}
+
+
 
 int main(int argc, char *argv[])
 {
@@ -22,6 +89,7 @@ int main(int argc, char *argv[])
 	socklen_t clilen;
 	struct sockaddr_in serv_addr, cli_addr;
 	packet pkt;
+	pthread_t clientThread;
     
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
         printf("ERROR opening socket");
@@ -41,26 +109,13 @@ int main(int argc, char *argv[])
 		clilen = sizeof(struct sockaddr_in);
 		if ((newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen)) == -1) 
 			printf("ERROR on accept");
-		
-		memset (&pkt, 0, sizeof (pkt));
-		
-		/* read from the socket */
-		n = read(newsockfd, &pkt, sizeof(pkt));
-		if (n < 0) 
-			printf("ERROR reading from socket");
-		printf("type: %d\n", pkt.type);
-		printf("seqn: %d\n", pkt.seqn);
-		printf("length: %d\n", pkt.length);
-		printf("timestamp: %d\n", pkt.timestamp);
-		printf("payload: %s\n", pkt._payload);
-		
-		/* write in the socket */ 
-		n = write(newsockfd,"I got your message", 18);
-		if (n < 0) 
-			printf("ERROR writing to socket");
+		memset (&pkt, 0, sizeof (pkt));	
+
+		pthread_create(&clientThread, NULL, thread_read_client, &newsockfd);
+		pthread_create(&clientThread, NULL, thread_write_client, &newsockfd);
 	}	
 
-	close(newsockfd);
+
 	close(sockfd);
 	return 0; 
 }

@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <cstdlib>
+#include <ctime>
 #include <signal.h>
 #include "common.h"
 
@@ -20,6 +21,7 @@ void* thread_read_client(void* socket){
 	
 	int n, localsockfd, *newsockfd = (int*)socket;
 	localsockfd = *newsockfd;
+	char localUserName[16];
 
 	packet pkt;
 	while(connected)
@@ -38,15 +40,18 @@ void* thread_read_client(void* socket){
 		switch(pkt.type)
 		{
 			case(TIPO_DISC):
-				printf("\nUser loged out.\n");
+				printf("\nUser %s loged out.\n",localUserName);
 				connected = false;
 				break;
 			case(TIPO_SEND):
+				//insertMessage(pkt.user,pkt._payload);
 				break;
 			case (TIPO_LOGIN):
-				printf("\nUser %s loged in.\n", pkt._payload);
+				printf("\nUser %s loged in.\n", pkt.user);
+				strcpy(localUserName,pkt.user);
 				break;
 			case(TIPO_FOLLOW):
+				//insertFollow(pkt.user,pkt._payload);
 				break;
 			default:
 				break;
@@ -61,23 +66,33 @@ void* thread_write_client(void* socket){
 	
 	int n=1, localsockfd, *newsockfd = (int*)socket;
 	localsockfd = *newsockfd;
-
+	packet pkt;
 	while(connected)
 	{
 		if(false){//needsToSend(user))
-			packet pkt;
+			
 			//pkt = consume(user);
-			pkt.type = 1;
+			pkt.type = TIPO_NOTI;
 			pkt.seqn = 2;
+			strcpy(pkt.user,"user_1");
+			strcpy(pkt._payload,"tst_messagem_1");
 			pkt.length = strlen(pkt._payload);
-			pkt.timestamp = std::time(0);;
+			pkt.timestamp = std::time(0);
 			n = write(localsockfd,&pkt, sizeof(pkt));
 
 			if (n < 0) 
 				printf("ERROR writing to socket");
 		}
 		
-		sleep(2);
+		sleep(10);
+
+		pkt.type = TIPO_NOTI;
+		pkt.seqn = 2;
+		strcpy(pkt.user,"user_1");
+		strcpy(pkt._payload,"tst_messagem_1");
+		pkt.length = strlen(pkt._payload);
+		pkt.timestamp = std::time(0);
+		//n = write(localsockfd,&pkt, sizeof(pkt));
 	}
 }
 

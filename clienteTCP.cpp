@@ -10,9 +10,10 @@
 #include <iostream>
 #include <cstdlib>
 #include <signal.h>
+#include <ctime>
 #include "common.h" 
 
-#define PORT 4000
+
 
 bool connected = true;
 int sockfd;
@@ -21,6 +22,7 @@ void signal_callback_handler(int signum) {
 	printf("\nDesconectando \n");
 	write(sockfd, &disc_pkt, sizeof(disc_pkt));
 	connected = false;
+	close(sockfd);
 	exit(signum);
 }
 
@@ -38,15 +40,11 @@ void* thread_read_client(void* socket){
 		
 		if (n < 0) 
 			printf("ERROR reading from socket");
-			printf("type: %d\n", pkt.type);
-			printf("socket: %d\n",localsockfd);
-			printf("seqn: %d\n", pkt.seqn);
-			printf("length: %d\n", pkt.length);
-			printf("timestamp: %d\n", pkt.timestamp);
-			printf("payload: %s\n", pkt._payload);
+		else{
+			if(pkt.type == TIPO_NOTI)
+				printf("\n\nNEW NOTIFICATION from user %s:\n%s\n\n",pkt.user,pkt._payload);
+		}
 	}
-
-	close(localsockfd);
 }
 
 int main(int argc, char *argv[])
@@ -74,7 +72,7 @@ int main(int argc, char *argv[])
         printf("ERROR opening socket\n");
     
 	serv_addr.sin_family = AF_INET;     
-	serv_addr.sin_port = htons(PORT);    
+	serv_addr.sin_port = htons(atoi(argv[3]));    
 	serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
 	bzero(&(serv_addr.sin_zero), 8);     
 	
@@ -89,7 +87,9 @@ int main(int argc, char *argv[])
 	pkt.length = strlen(perfil);
 	pkt.timestamp = std::time(0);
 	bzero(pkt._payload, sizeof(pkt._payload));
+	bzero(pkt.user, sizeof(pkt.user));
 	strcpy(pkt._payload, perfil);
+	strcpy(pkt.user,perfil);
 
     /* write in the socket */
 	n = write(sockfd, &pkt, sizeof(pkt));
@@ -104,25 +104,29 @@ int main(int argc, char *argv[])
     while(true)
     {
     	char comando[200];
-        printf("Por favor insira um comando:\n");
+        //printf("Por favor insira um comando:\n");
         fgets(comando, 200, stdin);
         
         char delim[] = " ";
 
         char *ptr = strtok(comando, delim);
-
+        printf("%s\n\n",ptr);
         bool eh_primeira_iteracao = true;
         int tipo_comando = -1; // nao sei chamar o .h, entao n consegui criar enum
         char resto_do_comando[200] = "";
+        
+        for(int i =0;i<strlen(ptr);i++)
+        	ptr[i] = tolower(ptr[i]);
+        printf("%sa",ptr);
         while (ptr != NULL)
         {
             if (eh_primeira_iteracao)
             {
-                if (strcmp(ptr, "FOLLOW") == 0 || strcmp(ptr, "follow") == 0)
+                if (strcmp(ptr, "follow") == 0)
                 { // fazer um tolower
                     tipo_comando = TIPO_FOLLOW;
                 }
-                else if (strcmp(ptr, "SEND") == 0 || strcmp(ptr, "send") == 0)
+                else if (strcmp(ptr, "send") == 0)
                 { // fazer um tolower
                     tipo_comando = TIPO_SEND;
                 }
@@ -136,19 +140,17 @@ int main(int argc, char *argv[])
             }
             ptr = strtok(NULL, delim);
         }
-        if (tipo_comando == 0)
-        {
-            //SeguirPerfil(resto_do_comando);
-        }
-        else if (tipo_comando == 1)
-        {
-            //Tweetar(resto_do_comando);
-        }
-        else
-        {
-            printf("Comando invalido. Por favor escreva um comando em um dos seguintes formatos: \n\tFOLLOW @username\n\tSEND message_to_send\n\n");
-        }
-    }
-	close(sockfd);
+		switch(tipo_comando)
+		{
+			case(TIPO_SEND):
+				//SeguirPerfil(resto_do_comando);
+				break;
+			case(TIPO_FOLLOW):
+				//Tweetar(resto_do_comando);
+				break;
+			default:
+			printf("Comando invalido. Por favor escreva um comando em um dos seguintes formatos: \n\tFOLLOW @username\n\tSEND message_to_send\n\n"); 
+				break;
+		}        
     return 0;
 }

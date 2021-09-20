@@ -38,12 +38,18 @@ void* thread_read_client(void* socket){
 		switch(pkt.type)
 		{
 			case(TIPO_DISC):
+				printf("\nUser loged out.\n");
 				connected = false;
 				break;
+			case(TIPO_SEND):
+				break;
 			case (TIPO_LOGIN):
-				printf("\nuser %s loged in\n", pkt._payload);
+				printf("\nUser %s loged in.\n", pkt._payload);
+				break;
+			case(TIPO_FOLLOW):
+				break;
 			default:
-			break;
+				break;
 		}
 			
 	}
@@ -64,7 +70,7 @@ void* thread_write_client(void* socket){
 			pkt.type = 1;
 			pkt.seqn = 2;
 			pkt.length = strlen(pkt._payload);
-			pkt.timestamp = 0;
+			pkt.timestamp = std::time(0);;
 			n = write(localsockfd,&pkt, sizeof(pkt));
 
 			if (n < 0) 

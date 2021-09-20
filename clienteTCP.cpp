@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 	pkt.type = TIPO_LOGIN;
 	pkt.seqn = 0;
 	pkt.length = strlen(perfil);
-	pkt.timestamp = 0;
+	pkt.timestamp = std::time(0);
 	bzero(pkt._payload, sizeof(pkt._payload));
 	strcpy(pkt._payload, perfil);
 

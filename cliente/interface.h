@@ -8,6 +8,7 @@ typedef enum TipoComando {
 } TipoComando;
 
 void IniciarSessao(char *perfil, char *end_servidor, char *porta);
+void signal_callback_handler(int signum);
 int main(int argc, char *argv[]);
 
 #endif 

@@ -15,7 +15,6 @@
 #include "./clienteTCP.hpp"
 
 bool connected = true;
-packet disc_pkt = {TIPO_DISC, 0, 5, 0, "adm", "Disc"};
 
 using namespace std;
 
@@ -23,7 +22,12 @@ ClientTCP::ClientTCP(char *_perfil, char *_end_servidor, char *_porta)
 {
 	perfil = _perfil;
 	end_servidor = _end_servidor;
-	porta = _porta;
+
+	if (_porta == NULL) {
+		porta = "4000";
+	} else {
+		porta = _porta;
+	}
 }
 
 void ClientTCP::set_sigint_callback(sighandler_t handler)
@@ -83,7 +87,7 @@ bool ClientTCP::start_connection()
 	else
 	{
 		if (pkt.type == TIPO_PERMISSAO_CON)
-			printf("CAIU NO IF\n\n");
+			printf("CAIU NO IF\n\n payload eh %s", pkt._payload);
 	}
 
 	// aqui verifica se ja tem 2 conexoes

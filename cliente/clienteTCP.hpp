@@ -14,7 +14,6 @@
 #include <cstdlib>
 #include <ctime>
 #include <signal.h>
-#include "../common.h"
 
 class ClientTCP 
 {
@@ -33,6 +32,5 @@ class ClientTCP
 		static void *thread_read_client(void *socket);
 
 };
-// int main(int argc, char *argv[]);
 
 #endif

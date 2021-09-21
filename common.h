@@ -8,7 +8,6 @@
 #define TIPO_NOTI		4
 #define TIPO_PERMISSAO_CON 5 // provisorio
 
-
 typedef struct __packet{
     uint16_t type; //Tipo do pacote (p.ex. DATA | CMD)
     uint16_t seqn; //Número de sequência
@@ -17,5 +16,7 @@ typedef struct __packet{
     char user[16];
     char _payload [128]; //Dados da mensagem
 } packet;
+
+packet disc_pkt = {TIPO_DISC, 0, 5, 0, "adm", "Disc"};
 
 #endif

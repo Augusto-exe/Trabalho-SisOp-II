@@ -20,8 +20,6 @@ bool SessionManager::add_session(char *username)
     Map::iterator it = sessionsQty.find(username);
     bool found = it != sessionsQty.end();
 
-    printf("found? %i \n", found);
-
     // if not, add it with 1
     if (!found)
     {
@@ -56,7 +54,7 @@ bool SessionManager::del_session(char *username)
     }
 
     int current = it->second;
-    if (current == 0)
+    if (current == 1)
     {
         sessionsQty.erase(username);
         return true;

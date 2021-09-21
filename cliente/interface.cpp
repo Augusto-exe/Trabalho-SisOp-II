@@ -11,13 +11,19 @@ void signal_callback_handler(int signum)
     clienteTCP->end_connection(signum);
 }
 
-void IniciarSessao(char *perfil, char *end_servidor, char *porta)
+bool IniciarSessao(char *perfil, char *end_servidor, char *porta)
 {
     printf("Iniciar sessao usando perfil %s, endereco de servidor %s e porta %s\n", perfil, end_servidor, porta);
     // chama algum metodo do clienteTCP, que vai tentar fazer a conexao e retornar != -1 se der certo.
     clienteTCP = new ClientTCP(perfil, end_servidor, porta);
     bool success = clienteTCP->start_connection();
+    if (!success)
+    {
+        return false;
+    }
     signal(SIGINT, signal_callback_handler);
+
+    return true;
 }
 
 void Tweetar(char *mensagem)
@@ -42,14 +48,19 @@ int main(int argc, char *argv[])
         char *perfil = argv[1];
         char *end_servidor = argv[2];
         char *porta = argv[3];
-        IniciarSessao(perfil, end_servidor, porta);
+        bool login_success = IniciarSessao(perfil, end_servidor, porta);
+
+        if (!login_success)
+        {
+            return 1;
+        }
 
         while (true)
         {
             char comando[200];
             printf("Por favor insira um comando:\n");
             fgets(comando, 200, stdin);
-            
+
             char delim[] = " ";
 
             char *ptr = strtok(comando, delim);

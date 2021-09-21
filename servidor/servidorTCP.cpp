@@ -16,17 +16,31 @@
 
 #define PORT 4000
 
-bool connected = true;
+bool connected[1024];
+int counter;
 SessionManager *sessionManager;
 
-void *thread_read_client(void *socket)
+typedef struct new_thread_args
 {
+	void *socket;
+	int counter;
+} new_thread_args;
+
+void *thread_read_client(void *args)
+{
+	struct new_thread_args *arg = (struct new_thread_args *)args;
+	int counter = arg->counter;
+	void *socket = arg->socket;
+	char *sessionUser;
+
+	printf("counter %d\n", counter);
+
 	int n, localsockfd, *newsockfd = (int *)socket;
 	localsockfd = *newsockfd;
 	char localUserName[16];
 
 	packet pkt;
-	while (connected)
+	while (connected[counter])
 	{
 		/* read from the socket */
 		// printf("\n--waiting to read--\n");
@@ -34,34 +48,30 @@ void *thread_read_client(void *socket)
 		if (n < 0)
 		{
 			printf("ERROR reading from socket");
-			connected = false;
+			connected[counter] = false;
 		}
 
-		// printf("type: %d\n", pkt.type);
-		// printf("socket: %d\n",localsockfd);
-		// printf("seqn: %d\n", pkt.seqn);
-		// printf("length: %d\n", pkt.length);
-		// printf("timestamp: %d\n", pkt.timestamp);
-		// printf("payload: %s\n", pkt._payload);
 		switch (pkt.type)
 		{
 		case (TIPO_DISC):
 			printf("\nUser %s loged out.\n", localUserName);
-			connected = false;
+			connected[counter] = false;
+			if (sessionUser != NULL)
+			{
+				sessionManager->del_session(sessionUser);
+			}
 			break;
 		case (TIPO_SEND):
 			//insertMessage(pkt.user,pkt._payload);
 			break;
 		case (TIPO_LOGIN):
 		{
-			printf("\nUser %s loged in.\n", pkt.user);
-
-			bool login_success = sessionManager->add_session(pkt.user);
+			sessionUser = strdup(pkt.user);
+			bool login_success = sessionManager->add_session(sessionUser);
 
 			strcpy(localUserName, pkt.user);
 			pkt.type = TIPO_PERMISSAO_CON;
 			pkt.seqn = 2;
-			strcpy(pkt.user, "user_1");
 			strcpy(pkt._payload, login_success ? "1" : "0");
 			pkt.length = strlen(pkt._payload);
 			pkt.timestamp = std::time(0);
@@ -69,14 +79,17 @@ void *thread_read_client(void *socket)
 
 			if (!login_success)
 			{
-				// termina a thread, termina a conexao TCP
-				// etc
 				printf("Login error\n");
+				break;
+			}
+			else
+			{
+				printf("\nUser %s loged in.\n", pkt.user);
 			}
 
 			if (n < 0)
 			{
-				printf("ERROR writing to socket");
+				printf("ERROR writing to socket\n");
 			}
 
 			break;
@@ -158,7 +171,14 @@ int main(int argc, char *argv[])
 			printf("ERROR on accept");
 		memset(&pkt, 0, sizeof(pkt));
 
-		pthread_create(&clientThread, NULL, thread_read_client, &newsockfd);
+		new_thread_args args;
+		args.counter = counter;
+		args.socket = &newsockfd;
+		connected[counter] = true;
+
+		counter += 1;
+
+		pthread_create(&clientThread, NULL, thread_read_client, (void *)&args);
 		pthread_create(&clientThread, NULL, thread_write_client, &newsockfd);
 	}
 

@@ -23,9 +23,12 @@ ClientTCP::ClientTCP(char *_perfil, char *_end_servidor, char *_porta)
 	perfil = _perfil;
 	end_servidor = _end_servidor;
 
-	if (_porta == NULL) {
+	if (_porta == NULL)
+	{
 		porta = "4000";
-	} else {
+	}
+	else
+	{
 		porta = _porta;
 	}
 }
@@ -83,11 +86,17 @@ bool ClientTCP::start_connection()
 
 	n = read(sockfd, &pkt, sizeof(pkt));
 	if (n < 0)
-		printf("ERROR reading from socket");
+		printf("[start_connection] ERROR reading from socket\n");
 	else
 	{
 		if (pkt.type == TIPO_PERMISSAO_CON)
-			printf("CAIU NO IF\n\n payload eh %s", pkt._payload);
+		{
+			if (atoi(pkt._payload) == 0)
+			{
+				printf("Voce ja esta logado em dois clientes, amigo\n");
+				return false;
+			}
+		}
 	}
 
 	// aqui verifica se ja tem 2 conexoes
@@ -110,7 +119,7 @@ void *ClientTCP::thread_read_client(void *socket)
 		n = read(localsockfd, &pkt, sizeof(pkt));
 
 		if (n < 0)
-			printf("ERROR reading from socket");
+			printf("[thread_read_client] ERROR reading from socket\n");
 		else
 		{
 			if (pkt.type == TIPO_NOTI)

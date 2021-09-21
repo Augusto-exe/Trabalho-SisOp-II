@@ -1,11 +1,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-// #include "interface.h" ????
+#include "clienteTCP.hpp"
 
-void IniciarSessao(char *perfil, char *end_servidor, char *porta)
+ClientTCP *clienteTCP;
+
+void signal_callback_handler(int signum)
+{
+    printf("\nDesconectando \n");
+    clienteTCP->end_connection(signum);
+}
+
+bool IniciarSessao(char *perfil, char *end_servidor, char *porta)
 {
     printf("Iniciar sessao usando perfil %s, endereco de servidor %s e porta %s\n", perfil, end_servidor, porta);
+    // chama algum metodo do clienteTCP, que vai tentar fazer a conexao e retornar != -1 se der certo.
+    clienteTCP = new ClientTCP(perfil, end_servidor, porta);
+    bool success = clienteTCP->start_connection();
+    if (!success)
+    {
+        return false;
+    }
+    signal(SIGINT, signal_callback_handler);
+
+    return true;
 }
 
 void Tweetar(char *mensagem)
@@ -20,6 +38,7 @@ void SeguirPerfil(char *perfil)
 
 int main(int argc, char *argv[])
 {
+    //set_sigint_callback
     if (argc < 3)
     {
         printf("Para iniciar uma sessão, por favor use o comando nesse formato: ./app_cliente <perfil> <endereço do servidor> <porta>\n");
@@ -29,14 +48,19 @@ int main(int argc, char *argv[])
         char *perfil = argv[1];
         char *end_servidor = argv[2];
         char *porta = argv[3];
-        IniciarSessao(perfil, end_servidor, porta);
+        bool login_success = IniciarSessao(perfil, end_servidor, porta);
+
+        if (!login_success)
+        {
+            return 1;
+        }
 
         while (true)
         {
             char comando[200];
             printf("Por favor insira um comando:\n");
             fgets(comando, 200, stdin);
-            
+
             char delim[] = " ";
 
             char *ptr = strtok(comando, delim);

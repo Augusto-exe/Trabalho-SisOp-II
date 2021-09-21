@@ -1,3 +1,6 @@
+#ifndef __client_tcp_hpp__
+#define __client_tcp_hpp__
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,3 +34,5 @@ class ClientTCP
 
 };
 // int main(int argc, char *argv[]);
+
+#endif

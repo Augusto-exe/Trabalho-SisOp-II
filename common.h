@@ -1,3 +1,6 @@
+#ifndef __common_h__
+#define __common_h__
+
 #define TIPO_DISC		0
 #define TIPO_SEND		1
 #define TIPO_LOGIN		2
@@ -14,3 +17,5 @@ typedef struct __packet{
     char user[16];
     char _payload [128]; //Dados da mensagem
 } packet;
+
+#endif

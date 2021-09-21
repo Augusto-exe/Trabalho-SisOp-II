@@ -4,13 +4,11 @@
 #include "clienteTCP.hpp"
 // #include "interface.h" ????
 
-ClientTCP *clienteTCP;
-
 void IniciarSessao(char *perfil, char *end_servidor, char *porta)
 {
     printf("Iniciar sessao usando perfil %s, endereco de servidor %s e porta %s\n", perfil, end_servidor, porta);
     // chama algum metodo do clienteTCP, que vai tentar fazer a conexao e retornar != -1 se der certo.
-    clienteTCP = new ClientTCP(perfil, end_servidor, porta);
+    ClientTCP clienteTCP(perfil, end_servidor, porta);
     bool success = clienteTCP.start_connection();
 }
 

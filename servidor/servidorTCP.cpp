@@ -11,7 +11,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <signal.h>
-#include "common.h"
+#include "../common.h"
 
 #define PORT 4000
 
@@ -49,6 +49,15 @@ void* thread_read_client(void* socket){
 			case (TIPO_LOGIN):
 				printf("\nUser %s loged in.\n", pkt.user);
 				strcpy(localUserName,pkt.user);
+				pkt.type = TIPO_PERMISSAO_CON;
+				pkt.seqn = 2;
+				strcpy(pkt.user,"user_1");
+				strcpy(pkt._payload,"tst_messagem_1");
+				pkt.length = strlen(pkt._payload);
+				pkt.timestamp = std::time(0);
+				n = write(localsockfd,&pkt, sizeof(pkt));
+				if (n < 0) 
+					printf("ERROR writing to socket");
 				break;
 			case(TIPO_FOLLOW):
 				//insertFollow(pkt.user,pkt._payload);

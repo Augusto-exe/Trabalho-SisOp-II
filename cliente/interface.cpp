@@ -1,11 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "clienteTCP.hpp"
 // #include "interface.h" ????
+
+ClientTCP *clienteTCP;
 
 void IniciarSessao(char *perfil, char *end_servidor, char *porta)
 {
     printf("Iniciar sessao usando perfil %s, endereco de servidor %s e porta %s\n", perfil, end_servidor, porta);
+    // chama algum metodo do clienteTCP, que vai tentar fazer a conexao e retornar != -1 se der certo.
+    clienteTCP = new ClientTCP(perfil, end_servidor, porta);
+    bool success = clienteTCP.start_connection();
 }
 
 void Tweetar(char *mensagem)
@@ -18,8 +24,15 @@ void SeguirPerfil(char *perfil)
     printf("Seguir perfil: %s\n", perfil);
 }
 
+void signal_callback_handler()
+{
+    printf("\nDesconectando \n");
+    //chama o disconnect
+}
+
 int main(int argc, char *argv[])
 {
+    //set_sigint_callback
     if (argc < 3)
     {
         printf("Para iniciar uma sessão, por favor use o comando nesse formato: ./app_cliente <perfil> <endereço do servidor> <porta>\n");

@@ -24,8 +24,9 @@ SessionManager *sessionManager;
 typedef struct new_thread_args
 {
 	void *socket;
-	int counter;
+	int sessionID;
 	bool connected;
+	string username;
 } new_thread_args;
 
 void *thread_read_client(void *args)
@@ -63,21 +64,23 @@ void *thread_read_client(void *args)
 			break;
 		case (TIPO_SEND):
 			//insertMessage(pkt.user,pkt._payload);
+			cout << "recebi uma msg " << pkt._payload << " do usuario " << pkt.user << endl;
+			// vai popular alguma coisa que o needsToSend vai ler
 			break;
 		case (TIPO_LOGIN):
 		{
 			sessionUser = strdup(pkt.user);
-			bool login_success = sessionManager->add_session(sessionUser);
+			int session_id = sessionManager->add_session(sessionUser);
 
 			strcpy(localUserName, pkt.user);
 			pkt.type = TIPO_PERMISSAO_CON;
 			pkt.seqn = 2;
-			strcpy(pkt._payload, login_success ? "1" : "0");
+			strcpy(pkt._payload, session_id != -1 ? "1" : "0");
 			pkt.length = strlen(pkt._payload);
 			pkt.timestamp = std::time(0);
 			n = write(localsockfd, &pkt, sizeof(pkt));
 
-			if (!login_success)
+			if (session_id == -1)
 			{
 				printf("Login error\n");
 				break;
@@ -113,9 +116,8 @@ void *thread_write_client(void *args)
 	packet pkt;
 	while (arg->connected)
 	{
-		if (false)
-		{ //needsToSend(user))
-
+		if (needsToSend(arg->username))
+		{ 
 			//pkt = consume(user);
 			pkt.type = TIPO_NOTI;
 			pkt.seqn = 2;
@@ -131,6 +133,11 @@ void *thread_write_client(void *args)
 	}
 
 	cout << "saindo do while no read" << endl;
+}
+
+bool needsToSend(string username) {
+	// vai consultar alguma coisa (um mapa de username -> file de notificacoes pendentes)
+	return true;
 }
 
 int main(int argc, char *argv[])

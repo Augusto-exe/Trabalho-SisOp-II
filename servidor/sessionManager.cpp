@@ -15,7 +15,8 @@ SessionManager::SessionManager()
 {
 }
 
-bool SessionManager::add_session(char *username)
+// returns the sessionID or -1 if the connection failed
+int SessionManager::add_session(string username)
 {
     // check if exist on map
     Map::iterator it = sessionsQty.find(username);
@@ -24,9 +25,9 @@ bool SessionManager::add_session(char *username)
     // if not, add it with 1
     if (!found)
     {
-        sessionsQty.insert(Map::value_type(strdup(username), 1));
+        sessionsQty[username] = 1;
         Map::iterator it = sessionsQty.find(username);
-        return true;
+        return 1;
     }
 
     int current = it->second;
@@ -34,15 +35,15 @@ bool SessionManager::add_session(char *username)
     // if already on max sessions, return false
     if (current >= MAX_SESSIONS)
     {
-        return false;
+        return -1;
     }
 
     //  increment the current value and return true
     it->second = current + 1;
-    return true;
+    return current;
 }
 
-bool SessionManager::del_session(char *username)
+bool SessionManager::del_session(string username)
 {
     // check if exist on map
     Map::iterator it = sessionsQty.find(username);

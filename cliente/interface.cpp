@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include "clienteTCP.hpp"
+
+using namespace std;
 
 ClientTCP *clienteTCP;
 
@@ -26,9 +29,13 @@ bool IniciarSessao(char *perfil, char *end_servidor, char *porta)
     return true;
 }
 
-void Tweetar(char *mensagem)
+void Tweetar(char *mensagem, char* username, int seqn)
 {
     printf("Tweetar a mensagem: %s\n", mensagem);
+    string msg_str = string(mensagem);
+    msg_str.erase(0, 1);
+    msg_str.pop_back();
+    clienteTCP->send_message(msg_str, string(username), seqn);
 }
 
 void SeguirPerfil(char *perfil)
@@ -96,7 +103,7 @@ int main(int argc, char *argv[])
             }
             else if (tipo_comando == 1)
             {
-                Tweetar(resto_do_comando);
+                Tweetar(resto_do_comando, perfil, 0);
             }
             else
             {

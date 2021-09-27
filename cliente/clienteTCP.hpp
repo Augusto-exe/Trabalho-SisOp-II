@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <unistd.h>
 #include <sys/types.h>
 #include <pthread.h> 
@@ -15,6 +16,8 @@
 #include <ctime>
 #include <signal.h>
 
+using namespace std;
+
 class ClientTCP 
 {
 	public:
@@ -22,6 +25,7 @@ class ClientTCP
 		void set_sigint_callback(sighandler_t handler);
 		void end_connection(int signum);
 		bool start_connection();
+		void send_message(string message, string username, int seqn);
 
 	private:
 		int sockfd;

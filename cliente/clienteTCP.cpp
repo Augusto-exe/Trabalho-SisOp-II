@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <string>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -44,6 +45,19 @@ void ClientTCP::end_connection(int signum)
 	connected = false;
 	close(sockfd);
 	exit(signum);
+}
+
+void ClientTCP::send_message(string message, string username, int seqn)
+{
+	packet pkt;
+	pkt.type = TIPO_SEND;
+	pkt.seqn = seqn;
+	strcpy(pkt.user, username.c_str());
+	strcpy(pkt._payload, message.c_str());
+	pkt.length = strlen(pkt._payload);
+	pkt.timestamp = std::time(0);
+
+	write(sockfd, &pkt, sizeof(pkt));
 }
 
 bool ClientTCP::start_connection()

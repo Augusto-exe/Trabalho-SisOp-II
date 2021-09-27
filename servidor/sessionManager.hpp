@@ -6,22 +6,14 @@
 #include <string.h>
 #include <map>
 
-struct char_cmp
-{
-    bool operator()(const char *a, const char *b) const
-    {
-        return strcmp(a, b) < 0;
-    }
-};
-
-typedef std::map<const char *, int, char_cmp> Map;
+typedef std::map<string, int> Map;
 
 class SessionManager
 {
 public:
     SessionManager();
-    bool add_session(char *username);
-    bool del_session(char *username);
+    int add_session(string username);
+    bool del_session(string username);
 
 private:
     /*

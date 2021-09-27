@@ -16,48 +16,48 @@
 
 #define PORT 4000
 
-bool connected[1024];
-int counter;
+using namespace std;
+
+bool connected = true;
 SessionManager *sessionManager;
 
 typedef struct new_thread_args
 {
 	void *socket;
 	int counter;
+	bool connected;
 } new_thread_args;
 
 void *thread_read_client(void *args)
 {
 	struct new_thread_args *arg = (struct new_thread_args *)args;
-	int counter = arg->counter;
+
 	void *socket = arg->socket;
 	char *sessionUser;
-
-	printf("counter %d\n", counter);
 
 	int n, localsockfd, *newsockfd = (int *)socket;
 	localsockfd = *newsockfd;
 	char localUserName[16];
 
 	packet pkt;
-	while (connected[counter])
+	while (arg->connected)
 	{
 		/* read from the socket */
-		// printf("\n--waiting to read--\n");
 		n = read(localsockfd, &pkt, sizeof(pkt));
 		if (n < 0)
 		{
-			printf("ERROR reading from socket");
-			connected[counter] = false;
+			cout << "ERROR reading from socket" << endl;
+			arg->connected = false;
 		}
 
 		switch (pkt.type)
 		{
 		case (TIPO_DISC):
-			printf("\nUser %s loged out.\n", localUserName);
-			connected[counter] = false;
+			cout << "User " << localUserName << "logged out." << endl;
+			arg->connected = false;
 			if (sessionUser != NULL)
 			{
+				cout << "entrou aqui" << endl;
 				sessionManager->del_session(sessionUser);
 			}
 			break;
@@ -105,13 +105,13 @@ void *thread_read_client(void *args)
 	close(localsockfd);
 }
 
-void *thread_write_client(void *socket)
+void *thread_write_client(void *args)
 {
-
-	int n = 1, localsockfd, *newsockfd = (int *)socket;
+	struct new_thread_args *arg = (struct new_thread_args *)args;
+	int n = 1, localsockfd, *newsockfd = (int *)arg->socket;
 	localsockfd = *newsockfd;
 	packet pkt;
-	while (connected)
+	while (arg->connected)
 	{
 		if (false)
 		{ //needsToSend(user))
@@ -128,17 +128,9 @@ void *thread_write_client(void *socket)
 			if (n < 0)
 				printf("ERROR writing to socket");
 		}
-
-		sleep(10);
-
-		pkt.type = TIPO_NOTI;
-		pkt.seqn = 2;
-		strcpy(pkt.user, "user_1");
-		strcpy(pkt._payload, "tst_messagem_1");
-		pkt.length = strlen(pkt._payload);
-		pkt.timestamp = std::time(0);
-		//n = write(localsockfd,&pkt, sizeof(pkt));
 	}
+
+	cout << "saindo do while no read" << endl;
 }
 
 int main(int argc, char *argv[])
@@ -161,6 +153,8 @@ int main(int argc, char *argv[])
 	if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
 		printf("ERROR on binding");
 
+	new_thread_args *args;
+
 	while (true)
 	{
 		// listen to the clients
@@ -171,15 +165,12 @@ int main(int argc, char *argv[])
 			printf("ERROR on accept");
 		memset(&pkt, 0, sizeof(pkt));
 
-		new_thread_args args;
-		args.counter = counter;
-		args.socket = &newsockfd;
-		connected[counter] = true;
+		args = (new_thread_args*) malloc(sizeof(new_thread_args));
+		args->socket = &newsockfd;
+		args->connected = true;
 
-		counter += 1;
-
-		pthread_create(&clientThread, NULL, thread_read_client, (void *)&args);
-		pthread_create(&clientThread, NULL, thread_write_client, &newsockfd);
+		pthread_create(&clientThread, NULL, thread_read_client, (void*) args);
+		pthread_create(&clientThread, NULL, thread_write_client, (void*) args);
 	}
 
 	close(sockfd);

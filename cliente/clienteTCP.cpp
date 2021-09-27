@@ -101,7 +101,7 @@ bool ClientTCP::start_connection()
 
 	// aqui verifica se ja tem 2 conexoes
 
-	//pthread_create(&clientThread, NULL, thread_read_client, &sockfd);
+	pthread_create(&clientThread, NULL, *ClientTCP::thread_read_client, &sockfd);
 
 	return true;
 }
@@ -111,6 +111,8 @@ void *ClientTCP::thread_read_client(void *socket)
 
 	int n, localsockfd, *newsockfd = (int *)socket;
 	localsockfd = *newsockfd;
+
+	printf("entrou na pthread\n");
 
 	packet pkt;
 	while (connected)
@@ -126,6 +128,8 @@ void *ClientTCP::thread_read_client(void *socket)
 				printf("\n\nNEW NOTIFICATION from user %s:\n%s\n\n", pkt.user, pkt._payload);
 		}
 	}
+
+	printf("saiu da pthread\n");
 }
 
 // int main(int argc, char *argv[])

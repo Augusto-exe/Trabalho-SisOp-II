@@ -9,30 +9,39 @@
 
 using namespace std;
 
-struct pendingNotification
-{
-    string sender;
-    int id;
-};
-typedef struct pendingNotification PendingNotification;
-
-struct notification
-{
-    int id;
-    int timestamp;
-    string message; //todo: tamanho maximo     int size;     int pending; };  typedef struct notification Notification;
-
-}; 
-typedef struct notification Notification;
-
-struct userMapContent
-{
-    vector<string> followersList;
-    vector<Notification> notificationList;
-    vector<PendingNotification> pendingList;
-};
-typedef userMapContent UserMapContent;
+UserMap users;
 
 NotificationManager::NotificationManager()
 {
+}
+
+void NotificationManager::create_user_if_not_found(string user)
+{
+    // check if exist on map
+    UserMap::iterator it = users.find(user);
+    bool found = it != users.end();
+
+    if (!found)
+    {
+        // cria o user
+        UserMapContent content;
+        vector<string> followers;
+        content.followersList = followers;
+
+        vector<Notification> notificationList;
+        content.notificationList = notificationList;
+
+        vector<PendingNotification> pendingList;
+        content.pendingList = pendingList;
+        users[user] = content;
+    }
+}
+
+bool NotificationManager::follow(string user, string followedUser)
+{
+    create_user_if_not_found(followedUser);
+
+    users[followedUser].followersList.push_back(user);
+
+    return true;
 }

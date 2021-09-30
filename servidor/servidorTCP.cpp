@@ -13,6 +13,7 @@
 #include <signal.h>
 #include "../common.h"
 #include "./sessionManager.hpp"
+#include "./notificationManager.hpp"
 
 #define PORT 4000
 
@@ -20,6 +21,7 @@ using namespace std;
 
 bool connected = true;
 SessionManager *sessionManager;
+NotificationManager *notificationManager;
 
 typedef struct new_thread_args
 {
@@ -70,7 +72,7 @@ void *thread_read_client(void *args)
 		case (TIPO_LOGIN):
 		{
 			sessionUser = strdup(pkt.user);
-			int session_id = sessionManager->add_session(sessionUser);
+			int session_id = sessionManager->add_session(string(sessionUser));
 
 			strcpy(localUserName, pkt.user);
 			pkt.type = TIPO_PERMISSAO_CON;
@@ -98,6 +100,10 @@ void *thread_read_client(void *args)
 			break;
 		}
 		case (TIPO_FOLLOW):
+			// dar um follow = se adicionar a lista de seguires de alguem
+			// payload diz o 'alguem' e o user ja vem no pacote
+			cout << "chegou um pacote do tipo follow do user" << pkt.user << endl;
+			notificationManager->follow(string(pkt.user), "FULANO");
 			//insertFollow(pkt.user,pkt._payload);
 			break;
 		default:
@@ -116,8 +122,9 @@ void *thread_write_client(void *args)
 	packet pkt;
 	while (arg->connected)
 	{
-		if (needsToSend(arg->username))
+		if (false)
 		{ 
+			// todo needsToSend(arg->username)
 			//pkt = consume(user);
 			pkt.type = TIPO_NOTI;
 			pkt.seqn = 2;
@@ -143,6 +150,7 @@ bool needsToSend(string username) {
 int main(int argc, char *argv[])
 {
 	sessionManager = new SessionManager();
+	notificationManager = new NotificationManager();
 	int sockfd, newsockfd, n;
 	socklen_t clilen;
 	struct sockaddr_in serv_addr, cli_addr;

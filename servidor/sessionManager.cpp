@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>
+#include <string>
 #include <map>
 #include "./sessionManager.hpp"
 

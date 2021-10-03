@@ -56,7 +56,7 @@ void *thread_read_client(void *args)
 		switch (pkt.type)
 		{
 		case (TIPO_DISC):
-			cout << "User " << localUserName << "logged out." << endl;
+			cout << "User " << localUserName << " logged out." << endl;
 			arg->connected = false;
 			if (sessionUser != NULL)
 			{
@@ -89,7 +89,7 @@ void *thread_read_client(void *args)
 			}
 			else
 			{
-				printf("\nUser %s loged in.\n", pkt.user);
+				printf("\nUser %s logged in.\n", pkt.user);
 			}
 
 			if (n < 0)
@@ -102,8 +102,8 @@ void *thread_read_client(void *args)
 		case (TIPO_FOLLOW):
 			// dar um follow = se adicionar a lista de seguires de alguem
 			// payload diz o 'alguem' e o user ja vem no pacote
-			cout << "chegou um pacote do tipo follow do user" << pkt.user << endl;
-			notificationManager->follow(string(pkt.user), "FULANO");
+			cout << "chegou um pacote do tipo follow do user " << pkt.user << "para seguir o " << pkt._payload << endl;
+			notificationManager->follow(string(pkt.user), string(pkt._payload));
 			//insertFollow(pkt.user,pkt._payload);
 			break;
 		default:
@@ -150,6 +150,7 @@ bool needsToSend(string username) {
 int main(int argc, char *argv[])
 {
 	sessionManager = new SessionManager();
+	cout << "dei new no NOTIFICATION MANAGER" << endl;
 	notificationManager = new NotificationManager();
 	int sockfd, newsockfd, n;
 	socklen_t clilen;

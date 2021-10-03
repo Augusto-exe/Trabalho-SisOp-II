@@ -35,6 +35,7 @@ class NotificationManager
 public:
     NotificationManager();
     bool follow(string user, string followedUser);
+    UserMap users;
     
 private:
     void create_user_if_not_found(string user);

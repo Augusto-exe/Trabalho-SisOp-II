@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <signal.h>
+#include "../common.h"
 
 using namespace std;
 
@@ -25,7 +26,7 @@ class ClientTCP
 		void set_sigint_callback(sighandler_t handler);
 		void end_connection(int signum);
 		bool start_connection();
-		void send_message(string message, string username, int seqn);
+		void send_message(string message, string username, int seqn, int messageType);
 
 	private:
 		int sockfd;

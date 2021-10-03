@@ -12,10 +12,11 @@
 #include <cstdlib>
 #include <signal.h>
 #include <ctime>
-#include "../common.h"
+// #include "../common.h"
 #include "./clienteTCP.hpp"
 
 bool connected = true;
+packet disc_pkt = {TIPO_DISC, 0, 5, 0, "adm", "Disc"};
 
 using namespace std;
 
@@ -47,10 +48,10 @@ void ClientTCP::end_connection(int signum)
 	exit(signum);
 }
 
-void ClientTCP::send_message(string message, string username, int seqn)
+void ClientTCP::send_message(string message, string username, int seqn, int messageType)
 {
 	packet pkt;
-	pkt.type = TIPO_SEND;
+	pkt.type = messageType;
 	pkt.seqn = seqn;
 	strcpy(pkt.user, username.c_str());
 	strcpy(pkt._payload, message.c_str());

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+// #include "../common.h"
 #include "clienteTCP.hpp"
 
 using namespace std;
@@ -33,14 +34,18 @@ void Tweetar(char *mensagem, char* username, int seqn)
 {
     printf("Tweetar a mensagem: %s\n", mensagem);
     string msg_str = string(mensagem);
-    msg_str.erase(0, 1);
+    msg_str.erase(0, 1); // Remove o espaço q ta ficando no primeiro caracter
     msg_str.pop_back();
-    clienteTCP->send_message(msg_str, string(username), seqn);
+    clienteTCP->send_message(msg_str, string(username), seqn, TIPO_SEND);
 }
 
-void SeguirPerfil(char *perfil)
+void SeguirPerfil(char *perfilQueSegue, char *perfilSeguido, int seqn)
 {
-    printf("Seguir perfil: %s\n", perfil);
+    printf("Seguir perfil: %s\n", perfilSeguido);
+    string msg_str = string(perfilSeguido);
+    msg_str.erase(0, 1); // Remove o espaço q ta ficando no primeiro caracter
+    msg_str.pop_back();
+    clienteTCP->send_message(msg_str, string(perfilQueSegue), seqn, TIPO_FOLLOW);
 }
 
 int main(int argc, char *argv[])
@@ -99,7 +104,7 @@ int main(int argc, char *argv[])
             }
             if (tipo_comando == 0)
             {
-                SeguirPerfil(resto_do_comando);
+                SeguirPerfil(perfil, resto_do_comando, 0);
             }
             else if (tipo_comando == 1)
             {

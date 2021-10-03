@@ -17,6 +17,4 @@ typedef struct __packet{
     char _payload [128]; //Dados da mensagem
 } packet;
 
-packet disc_pkt = {TIPO_DISC, 0, 5, 0, "adm", "Disc"};
-
 #endif

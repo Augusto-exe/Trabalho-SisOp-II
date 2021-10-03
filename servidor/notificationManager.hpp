@@ -39,4 +39,7 @@ public:
     
 private:
     void create_user_if_not_found(string user);
+    void updateFile(UserMap users);
+    UserMap openFile();
+
 };

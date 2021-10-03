@@ -3,12 +3,14 @@
 #include <string.h>
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <map>
 #include <vector>
 #include <algorithm>
 #include <mutex>
 #include <chrono>
 #include <thread>
+#include <bits/stdc++.h>
 #include "./notificationManager.hpp"
 
 using namespace std;
@@ -17,6 +19,8 @@ mutex mtx;
 
 NotificationManager::NotificationManager()
 {
+    // carrega a lista de seguidores salva se tiver
+    this->users = openFile();
 }
 
 void NotificationManager::create_user_if_not_found(string user)
@@ -44,8 +48,8 @@ void NotificationManager::create_user_if_not_found(string user)
 bool NotificationManager::follow(string user, string followedUser)
 {
     mtx.lock();
-    cout << "A mimir (" << user << " tentando seguir " << followedUser << ")" << endl;
-    this_thread::sleep_for(chrono::milliseconds(20000));
+    // cout << "A mimir (" << user << " tentando seguir " << followedUser << ")" << endl;
+    // this_thread::sleep_for(chrono::milliseconds(20000));
     create_user_if_not_found(followedUser);
     if (user != followedUser) 
     {
@@ -56,6 +60,7 @@ bool NotificationManager::follow(string user, string followedUser)
         if (!alreadyFollows)
         {
             this->users[followedUser].followersList.push_back(user);
+            updateFile(this->users);
         }
         else 
         {
@@ -69,4 +74,55 @@ bool NotificationManager::follow(string user, string followedUser)
     mtx.unlock();
 
     return true;
+}
+
+void NotificationManager::updateFile(UserMap users)
+{
+    ofstream stream;
+
+    stream.open("followersList.txt");
+    
+    if (stream)
+    {
+        for (auto itMap:users)
+        {
+            stream << endl << itMap.first << ":";
+            for (auto itVec:itMap.second.followersList)
+            { 
+                stream << " " << itVec;
+            }
+        }
+    }
+
+    stream.close();
+}
+
+
+UserMap NotificationManager::openFile()
+{
+    ifstream stream;
+    string username, follower, followers;
+
+    UserMap users;
+
+    stream.open("followersList.txt");
+    stream.ignore();
+    
+    while (stream.good())
+    {
+        getline(stream, username, ':');
+        stream.ignore();
+        getline(stream, followers);
+        istringstream iss(followers);
+        cout << username << ":";
+        while(getline(iss, follower, ' '))
+        {
+            cout << " " << follower;
+            users[username].followersList.push_back(follower);
+        }
+        cout << endl;
+    }
+    stream.close();
+
+    return users;
 }

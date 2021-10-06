@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <string>
 #include <iostream>
 #include <fstream>
 #include <map>
@@ -74,6 +73,82 @@ bool NotificationManager::follow(string user, string followedUser)
     mtx.unlock();
 
     return true;
+}
+void NotificationManager::tweetReceived(string user, string msg,int timestamp)
+{
+    Notification newNotification,lastNotification;
+    PendingNotification newPending;
+
+    newNotification.timestamp = timestamp;
+    newNotification.message = msg;
+    newNotification.remainingFollowers = this->users[user].followersList.size();
+    
+    if(!this->users[user].notificationList.size())
+    {
+        newNotification.id = 0;   
+    }
+    else
+    {
+        lastNotification = this->users[user].notificationList.back();
+        newNotification.id = lastNotification.id + 1;    
+    }
+
+    newPending.id = newNotification.id;
+    newPending.sender = user;
+
+    this->users[user].notificationList.push_back(newNotification);
+
+    for(auto itVec : this->users[user].followersList)
+    {
+        create_user_if_not_found(itVec);
+        this->users[itVec].pendingList.push_back(newPending);
+        cout << itVec << " :" << endl;
+        for(auto itVec2 : this->users[itVec].pendingList)
+            cout << itVec2.sender << " " << itVec2.id << endl;
+    }
+
+
+
+}
+
+bool NotificationManager::needsToSend(string username)
+{
+    bool teste;
+    mtx.lock();
+        teste = (this->users[username].pendingList.size() > 0);
+    mtx.unlock();
+    return teste;
+
+
+}
+
+packet NotificationManager::consumeTweet(string username)
+{
+    PendingNotification pendingNot;
+    packet notificationPkt;
+    pendingNot = this->users[username].pendingList.front();
+    this->users[username].pendingList.erase(this->users[username].pendingList.begin());
+    
+    for (auto itVet : this->users[pendingNot.sender].notificationList)
+    {
+        if(itVet.id == pendingNot.id)
+        {   
+            if(itVet.remainingFollowers >0)
+            {
+                itVet.remainingFollowers -=1;
+                strcpy(notificationPkt._payload, itVet.message.c_str());
+                notificationPkt.type = TIPO_NOTI;
+                notificationPkt.timestamp = itVet.timestamp;
+                strcpy(notificationPkt.user, pendingNot.sender.c_str());
+                notificationPkt.length = strlen(notificationPkt._payload);    
+            }
+            else{
+                //this->users[pendingNot.sender].notificationList.erase(itVet);
+            }
+            break;
+        } 
+    }
+    return notificationPkt;
 }
 
 void NotificationManager::updateFile(UserMap users)

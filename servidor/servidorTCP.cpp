@@ -28,15 +28,41 @@ typedef struct new_thread_args
 	void *socket;
 	int sessionID;
 	bool connected;
-	string username;
+	char* username;
 } new_thread_args;
+
+void *thread_tweet_to_client(void *args)
+{
+	struct new_thread_args *arg = (struct new_thread_args *)args;
+	int n = 1, localsockfd, *newsockfd = (int *)arg->socket;
+	localsockfd = *newsockfd;
+	packet pkt;
+	string username = string(arg->username);
+	while (arg->connected)
+	{
+		if (notificationManager->needsToSend(username))
+		{ 
+
+			pkt = notificationManager->consumeTweet(username);;
+			n = write(localsockfd, &pkt, sizeof(pkt));
+
+			if (n < 0)
+				printf("ERROR writing to socket");
+			sleep(2);
+		}
+	}
+
+	cout << "saindo do while no read" << endl;
+}
 
 void *thread_read_client(void *args)
 {
 	struct new_thread_args *arg = (struct new_thread_args *)args;
+	pthread_t clientThread;
 
 	void *socket = arg->socket;
 	char *sessionUser;
+	int session_id;
 
 	int n, localsockfd, *newsockfd = (int *)socket;
 	localsockfd = *newsockfd;
@@ -67,12 +93,13 @@ void *thread_read_client(void *args)
 		case (TIPO_SEND):
 			//insertMessage(pkt.user,pkt._payload);
 			cout << "recebi uma msg " << pkt._payload << " do usuario " << pkt.user << endl;
+			notificationManager->tweetReceived(string(pkt.user),string(pkt._payload),pkt.timestamp);
 			// vai popular alguma coisa que o needsToSend vai ler
 			break;
 		case (TIPO_LOGIN):
 		{
 			sessionUser = strdup(pkt.user);
-			int session_id = sessionManager->add_session(string(sessionUser));
+			session_id = sessionManager->add_session(string(sessionUser));
 
 			strcpy(localUserName, pkt.user);
 			pkt.type = TIPO_PERMISSAO_CON;
@@ -80,7 +107,7 @@ void *thread_read_client(void *args)
 			strcpy(pkt._payload, session_id != -1 ? "1" : "0");
 			pkt.length = strlen(pkt._payload);
 			pkt.timestamp = std::time(0);
-			n = write(localsockfd, &pkt, sizeof(pkt));
+
 
 			if (session_id == -1)
 			{
@@ -89,14 +116,19 @@ void *thread_read_client(void *args)
 			}
 			else
 			{
+				arg->username =(char*) malloc(16*sizeof(char));
 				printf("\nUser %s logged in.\n", pkt.user);
+				strcpy(arg->username, localUserName);
+				arg->sessionID = session_id;
+				cout << "chegou na criaçao de thread " << arg->username <<endl;
+				pthread_create(&clientThread, NULL, thread_tweet_to_client, (void*) arg);
 			}
 
 			if (n < 0)
 			{
 				printf("ERROR writing to socket\n");
 			}
-
+			n = write(localsockfd, &pkt, sizeof(pkt));
 			break;
 		}
 		case (TIPO_FOLLOW):
@@ -114,38 +146,6 @@ void *thread_read_client(void *args)
 	close(localsockfd);
 }
 
-void *thread_write_client(void *args)
-{
-	struct new_thread_args *arg = (struct new_thread_args *)args;
-	int n = 1, localsockfd, *newsockfd = (int *)arg->socket;
-	localsockfd = *newsockfd;
-	packet pkt;
-	while (arg->connected)
-	{
-		if (false)
-		{ 
-			// todo needsToSend(arg->username)
-			//pkt = consume(user);
-			pkt.type = TIPO_NOTI;
-			pkt.seqn = 2;
-			strcpy(pkt.user, "user_1");
-			strcpy(pkt._payload, "tst_messagem_1");
-			pkt.length = strlen(pkt._payload);
-			pkt.timestamp = std::time(0);
-			n = write(localsockfd, &pkt, sizeof(pkt));
-
-			if (n < 0)
-				printf("ERROR writing to socket");
-		}
-	}
-
-	cout << "saindo do while no read" << endl;
-}
-
-bool needsToSend(string username) {
-	// vai consultar alguma coisa (um mapa de username -> file de notificacoes pendentes)
-	return true;
-}
 
 int main(int argc, char *argv[])
 {
@@ -175,18 +175,18 @@ int main(int argc, char *argv[])
 	{
 		// listen to the clients
 		listen(sockfd, 5);
-
+		args = (new_thread_args*) malloc(sizeof(new_thread_args));
 		clilen = sizeof(struct sockaddr_in);
 		if ((newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen)) == -1)
 			printf("ERROR on accept");
 		memset(&pkt, 0, sizeof(pkt));
 
-		args = (new_thread_args*) malloc(sizeof(new_thread_args));
+
 		args->socket = &newsockfd;
 		args->connected = true;
 
 		pthread_create(&clientThread, NULL, thread_read_client, (void*) args);
-		pthread_create(&clientThread, NULL, thread_write_client, (void*) args);
+		
 	}
 
 	close(sockfd);

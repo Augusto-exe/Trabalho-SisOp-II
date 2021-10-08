@@ -127,8 +127,6 @@ void *ClientTCP::thread_read_client(void *socket)
 	int n, localsockfd, *newsockfd = (int *)socket;
 	localsockfd = *newsockfd;
 
-	printf("entrou na pthread\n");
-
 	packet pkt;
 	while (connected)
 	{
@@ -144,7 +142,6 @@ void *ClientTCP::thread_read_client(void *socket)
 		}
 	}
 
-	printf("saiu da pthread\n");
 }
 
 // int main(int argc, char *argv[])

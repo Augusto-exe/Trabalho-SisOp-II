@@ -95,6 +95,7 @@ void NotificationManager::tweetReceived(string user, string msg,int timestamp)
         newNotification.id = lastNotification.id + 1;    
     }
     mtx.unlock();
+
     newPending.id = newNotification.id;
     newPending.sender = user;
 
@@ -105,9 +106,6 @@ void NotificationManager::tweetReceived(string user, string msg,int timestamp)
     {
         create_user_if_not_found(itVec);
         this->users[itVec].pendingList.push_back(newPending);
-        cout << itVec << " :" << endl;
-        for(auto itVec2 : this->users[itVec].pendingList)
-            cout << itVec2.sender << " " << itVec2.id << endl;
     }
     mtx.unlock();
 
@@ -134,22 +132,21 @@ packet NotificationManager::consumeTweet(string username)
     pendingNot = this->users[username].pendingList.front();
     this->users[username].pendingList.erase(this->users[username].pendingList.begin());
     
-    for (auto itVet : this->users[pendingNot.sender].notificationList)
+    //for (auto itVet : this->users[pendingNot.sender].notificationList)
+    for (auto itVet = this->users[pendingNot.sender].notificationList.begin(); itVet != this->users[pendingNot.sender].notificationList.end(); ++itVet)
     {
-        if(itVet.id == pendingNot.id)
+        if((*itVet).id == pendingNot.id)
         {   
-            if(itVet.remainingFollowers >0)
+            (*itVet).remainingFollowers -=1;
+            strcpy(notificationPkt._payload, (*itVet).message.c_str());
+            notificationPkt.type = TIPO_NOTI;
+            notificationPkt.timestamp = (*itVet).timestamp;
+            strcpy(notificationPkt.user, pendingNot.sender.c_str());
+            notificationPkt.length = strlen(notificationPkt._payload);
+            if((*itVet).remainingFollowers == 0)
             {
-                itVet.remainingFollowers -=1;
-                strcpy(notificationPkt._payload, itVet.message.c_str());
-                notificationPkt.type = TIPO_NOTI;
-                notificationPkt.timestamp = itVet.timestamp;
-                strcpy(notificationPkt.user, pendingNot.sender.c_str());
-                notificationPkt.length = strlen(notificationPkt._payload);    
-            }
-            else{
-                //this->users[pendingNot.sender].notificationList.erase(itVet);
-            }
+                this->users[pendingNot.sender].notificationList.erase(itVet);
+            }    
             break;
         } 
     }
@@ -188,7 +185,7 @@ UserMap NotificationManager::openFile()
 
     stream.open("followersList.txt");
     stream.ignore();
-    
+    cout << "User: Followers List" << endl;
     while (stream.good())
     {
         getline(stream, username, ':');
@@ -206,4 +203,68 @@ UserMap NotificationManager::openFile()
     stream.close();
 
     return users;
+}
+
+// returns the sessionID or -1 if the connection failed
+int NotificationManager::add_session(string username)
+{
+    // check if exist on map
+    SessionMap::iterator it = this->sessionsQty.find(username);
+    bool found = it != this->sessionsQty.end();
+
+    // if not, add it with 1
+    if (!found)
+    {
+        sessionsQty[username].push_back(1);
+        SessionMap::iterator it = this->sessionsQty.find(username);
+        return 1;
+    }
+
+    auto current = it->second;
+
+    // if already on max sessions, return false
+    if (current.size() >= MAX_SESSIONS)
+    {
+        cout << "limite excedido " << current.size() << endl;
+        return -1;
+    }
+
+    //  increment the current value and return true
+    if(current.front() == 1)  //TO-DO: arrumar pra ficar generalizado para N sessões
+        it->second.push_back(2);
+    else
+        it->second.push_back(1);
+    return it->second.back();
+}
+
+bool NotificationManager::del_session(string username,int session)
+{
+
+    // check if exist on map
+    SessionMap::iterator it = this->sessionsQty.find(username);
+    bool found = it != this->sessionsQty.end();
+
+    // if not, add it with 1
+    if (!found)
+    {
+        return true;
+    }
+
+    if (it->second.size() == 1)
+    {
+        sessionsQty.erase(username);
+        return true;
+    }
+
+    for (auto itVec = this->sessionsQty[username].begin(); itVec != this->sessionsQty[username].end(); ++itVec)
+    {
+        if(*itVec == session)
+        {
+            this->sessionsQty[username].erase(itVec);
+            break;
+        }
+    }
+  
+
+    return true;
 }

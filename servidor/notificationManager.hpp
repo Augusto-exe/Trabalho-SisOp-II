@@ -3,7 +3,10 @@
 #include <string.h>
 #include <vector>
 #include <string>
+#include <map>
 #include "../common.h"
+
+#define MAX_SESSIONS 2
 
 using namespace std;
 
@@ -11,8 +14,11 @@ struct pendingNotification
 {
     string sender;
     int id;
+    vector<int> sessions;
 };
 typedef struct pendingNotification PendingNotification;
+
+typedef std::map<string, vector<int>> SessionMap;
 
 struct notification
 {
@@ -41,7 +47,10 @@ public:
     void tweetReceived(string user, string msg,int timestamp);
     bool needsToSend(string username);
     packet consumeTweet(string username);
+    int add_session(string username);
+    bool del_session(string username, int session);
     UserMap users;
+    SessionMap sessionsQty;
     
 private:
     void create_user_if_not_found(string user);

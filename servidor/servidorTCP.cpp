@@ -12,7 +12,6 @@
 #include <ctime>
 #include <signal.h>
 #include "../common.h"
-#include "./sessionManager.hpp"
 #include "./notificationManager.hpp"
 
 #define PORT 4000
@@ -20,7 +19,7 @@
 using namespace std;
 
 bool connected = true;
-SessionManager *sessionManager;
+
 NotificationManager *notificationManager;
 
 typedef struct new_thread_args
@@ -52,7 +51,7 @@ void *thread_tweet_to_client(void *args)
 		}
 	}
 
-	cout << "saindo do while no read" << endl;
+	
 }
 
 void *thread_read_client(void *args)
@@ -86,22 +85,21 @@ void *thread_read_client(void *args)
 			arg->connected = false;
 			if (sessionUser != NULL)
 			{
-				cout << "entrou aqui" << endl;
-				sessionManager->del_session(sessionUser,session_id);
+
+			notificationManager->del_session(sessionUser,session_id);
 			}
 			break;
 		case (TIPO_SEND):
 			//insertMessage(pkt.user,pkt._payload);
-			cout << "recebi uma msg " << pkt._payload << " do usuario " << pkt.user << endl;
+			//cout << "recebi uma msg " << pkt._payload << " do usuario " << pkt.user << endl;
 			notificationManager->tweetReceived(string(pkt.user),string(pkt._payload),pkt.timestamp);
 			// vai popular alguma coisa que o needsToSend vai ler
 			break;
 		case (TIPO_LOGIN):
 		{
 			sessionUser = strdup(pkt.user);
-			session_id = sessionManager->add_session(string(sessionUser));
+			session_id = notificationManager->add_session(string(sessionUser));
 
-			cout << "user " << sessionUser << "received session id: " << session_id << endl; 
 
 			strcpy(localUserName, pkt.user);
 			pkt.type = TIPO_PERMISSAO_CON;
@@ -120,7 +118,7 @@ void *thread_read_client(void *args)
 				printf("\nUser %s logged in.\n", pkt.user);
 				strcpy(arg->username, localUserName);
 				arg->sessionID = session_id;
-				cout << "chegou na criaçao de thread " << arg->username <<endl;
+		
 				pthread_create(&clientThread, NULL, thread_tweet_to_client, (void*) arg);
 			}
 
@@ -134,9 +132,8 @@ void *thread_read_client(void *args)
 		case (TIPO_FOLLOW):
 			// dar um follow = se adicionar a lista de seguires de alguem
 			// payload diz o 'alguem' e o user ja vem no pacote
-			cout << "chegou um pacote do tipo follow do user " << pkt.user << "para seguir o " << pkt._payload << endl;
+			
 			notificationManager->follow(string(pkt.user), string(pkt._payload));
-			//insertFollow(pkt.user,pkt._payload);
 			break;
 		default:
 			break;
@@ -149,8 +146,7 @@ void *thread_read_client(void *args)
 
 int main(int argc, char *argv[])
 {
-	sessionManager = new SessionManager();
-	cout << "dei new no NOTIFICATION MANAGER" << endl;
+
 	notificationManager = new NotificationManager();
 	int sockfd, newsockfd, n;
 	socklen_t clilen;

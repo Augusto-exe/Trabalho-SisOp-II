@@ -1,5 +1,6 @@
 
 @a: @argel @augusto @nicolas
 @argel: @nicolas @augusto
+@augusto: @nicolas
 @b: @argel @augusto
 @nicolas: @argel

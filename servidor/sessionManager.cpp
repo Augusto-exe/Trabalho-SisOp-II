@@ -3,6 +3,7 @@
 #include <string.h>
 #include <iostream>
 #include <string>
+
 #include <map>
 #include "./sessionManager.hpp"
 
@@ -26,49 +27,54 @@ int SessionManager::add_session(string username)
     // if not, add it with 1
     if (!found)
     {
-        sessionsQty[username] = 1;
+        sessionsQty[username].push_back(1);
         Map::iterator it = sessionsQty.find(username);
         return 1;
     }
 
-    int current = it->second;
+    auto current = it->second;
 
     // if already on max sessions, return false
-    if (current >= MAX_SESSIONS)
+    if (current.size() >= MAX_SESSIONS)
     {
+        cout << "limite excedido " << current.size() << endl;
         return -1;
     }
 
     //  increment the current value and return true
-    it->second = current + 1;
-    return current;
+    if(current.front() == 1)
+        it->second.push_back(2);
+    else
+        it->second.push_back(1);
+    return it->second.back();
 }
 
-bool SessionManager::del_session(string username)
+bool SessionManager::del_session(string username,int session)
 {
     // check if exist on map
     Map::iterator it = sessionsQty.find(username);
     bool found = it != sessionsQty.end();
 
     // if not, add it with 1
-    cout << "found?" << found << endl;
     if (!found)
     {
         return true;
     }
 
-    int current = it->second;
-    cout << "current?" << current << endl;
-    if (current == 1)
+    vector<int> current = it->second;
+    if (current.size() == 1)
     {
-        cout << "deleta" << endl;
-        it->second = 0;
         sessionsQty.erase(username);
         return true;
     }
 
-    cout << "nao entrou no if" << endl;
+    for (auto itVec = it->second.begin(); itVec != it->second.end(); ++itVec)
+    {
+        if(*itVec == session)
+            it->second.erase(itVec);
+    }
 
-    it->second = current - 1;
+  
+
     return true;
 }

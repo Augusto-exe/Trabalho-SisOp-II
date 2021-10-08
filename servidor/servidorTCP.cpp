@@ -87,7 +87,7 @@ void *thread_read_client(void *args)
 			if (sessionUser != NULL)
 			{
 				cout << "entrou aqui" << endl;
-				sessionManager->del_session(sessionUser);
+				sessionManager->del_session(sessionUser,session_id);
 			}
 			break;
 		case (TIPO_SEND):
@@ -101,6 +101,8 @@ void *thread_read_client(void *args)
 			sessionUser = strdup(pkt.user);
 			session_id = sessionManager->add_session(string(sessionUser));
 
+			cout << "user " << sessionUser << "received session id: " << session_id << endl; 
+
 			strcpy(localUserName, pkt.user);
 			pkt.type = TIPO_PERMISSAO_CON;
 			pkt.seqn = 2;
@@ -108,11 +110,9 @@ void *thread_read_client(void *args)
 			pkt.length = strlen(pkt._payload);
 			pkt.timestamp = std::time(0);
 
-
 			if (session_id == -1)
 			{
-				printf("Login error\n");
-				break;
+				printf("Login error\n");	
 			}
 			else
 			{

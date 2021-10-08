@@ -5,18 +5,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+#include <vector>
 #include <map>
 
 using namespace std;
 
-typedef std::map<string, int> Map;
+typedef std::map<string, vector<int>> Map;
 
 class SessionManager
 {
 public:
     SessionManager();
     int add_session(string username);
-    bool del_session(string username);
+    bool del_session(string username, int session);
 
 private:
     /*

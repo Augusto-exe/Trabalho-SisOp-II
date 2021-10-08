@@ -81,6 +81,8 @@ void NotificationManager::tweetReceived(string user, string msg,int timestamp)
 
     newNotification.timestamp = timestamp;
     newNotification.message = msg;
+
+    mtx.lock();
     newNotification.remainingFollowers = this->users[user].followersList.size();
     
     if(!this->users[user].notificationList.size())
@@ -92,10 +94,11 @@ void NotificationManager::tweetReceived(string user, string msg,int timestamp)
         lastNotification = this->users[user].notificationList.back();
         newNotification.id = lastNotification.id + 1;    
     }
-
+    mtx.unlock();
     newPending.id = newNotification.id;
     newPending.sender = user;
 
+    mtx.lock();
     this->users[user].notificationList.push_back(newNotification);
 
     for(auto itVec : this->users[user].followersList)
@@ -106,7 +109,7 @@ void NotificationManager::tweetReceived(string user, string msg,int timestamp)
         for(auto itVec2 : this->users[itVec].pendingList)
             cout << itVec2.sender << " " << itVec2.id << endl;
     }
-
+    mtx.unlock();
 
 
 }
@@ -126,6 +129,8 @@ packet NotificationManager::consumeTweet(string username)
 {
     PendingNotification pendingNot;
     packet notificationPkt;
+
+    mtx.lock();
     pendingNot = this->users[username].pendingList.front();
     this->users[username].pendingList.erase(this->users[username].pendingList.begin());
     
@@ -148,6 +153,7 @@ packet NotificationManager::consumeTweet(string username)
             break;
         } 
     }
+    mtx.unlock();
     return notificationPkt;
 }
 

@@ -27,7 +27,7 @@ ClientTCP::ClientTCP(char *_perfil, char *_end_servidor, char *_porta)
 
 	if (_porta == NULL)
 	{
-		porta = "4000";
+		strcpy(porta,"4000");
 	}
 	else
 	{
@@ -133,8 +133,12 @@ void *ClientTCP::thread_read_client(void *socket)
 		/* read from the socket */
 		n = read(localsockfd, &pkt, sizeof(pkt));
 
-		if (n < 0)
-			printf("[thread_read_client] ERROR reading from socket\n");
+		if (n <= 0) {
+			printf("[thread_read_client] ERROR reading from socket. Disconnecting...\n");
+			connected = false;
+			close(localsockfd);
+			exit(SIGINT);
+		}
 		else
 		{
 			if (pkt.type == TIPO_NOTI)
@@ -142,86 +146,5 @@ void *ClientTCP::thread_read_client(void *socket)
 		}
 	}
 
+	return 0;
 }
-
-// int main(int argc, char *argv[])
-//{
-// int n;
-
-// packet pkt;
-
-// char *perfil = argv[1];
-
-// pkt.type = TIPO_LOGIN;
-// pkt.seqn = 0;
-// pkt.length = strlen(perfil);
-// pkt.timestamp = std::time(0);
-// bzero(pkt._payload, sizeof(pkt._payload));
-// bzero(pkt.user, sizeof(pkt.user));
-// strcpy(pkt._payload, perfil);
-// strcpy(pkt.user, perfil);
-
-// /* write in the socket */
-// n = write(sockfd, &pkt, sizeof(pkt));
-// if (n < 0)
-// 	printf("ERROR writing to socket\n");
-
-// /* read from the socket */
-// pthread_create(&clientThread, NULL, thread_read_client, &sockfd);
-
-// //printf("%s\n",buffer);
-// while (true)
-// {
-// 	char comando[200];
-// 	//printf("Por favor insira um comando:\n");
-// 	fgets(comando, 200, stdin);
-
-// 	char delim[] = " ";
-
-// 	char *ptr = strtok(comando, delim);
-// 	printf("%s\n\n", ptr);
-// 	bool eh_primeira_iteracao = true;
-// 	int tipo_comando = -1; // nao sei chamar o .h, entao n consegui criar enum
-// 	char resto_do_comando[200] = "";
-
-// 	for (int i = 0; i < strlen(ptr); i++)
-// 		ptr[i] = tolower(ptr[i]);
-// 	printf("%sa", ptr);
-// 	while (ptr != NULL)
-// 	{
-// 		if (eh_primeira_iteracao)
-// 		{
-// 			if (strcmp(ptr, "follow") == 0)
-// 			{ // fazer um tolower
-// 				tipo_comando = TIPO_FOLLOW;
-// 			}
-// 			else if (strcmp(ptr, "send") == 0)
-// 			{ // fazer um tolower
-// 				tipo_comando = TIPO_SEND;
-// 			}
-// 			eh_primeira_iteracao = false;
-// 		}
-// 		else
-// 		{
-// 			char aux_string[100];
-// 			sprintf(aux_string, " %s", ptr);
-// 			strcat(resto_do_comando, aux_string);
-// 		}
-// 		ptr = strtok(NULL, delim);
-// 	}
-// 	switch (tipo_comando)
-// 	{
-// 	case (TIPO_SEND):
-// 		//SeguirPerfil(resto_do_comando);
-// 		break;
-// 	case (TIPO_FOLLOW):
-// 		//Tweetar(resto_do_comando);
-// 		break;
-// 	default:
-// 		printf("Comando invalido. Por favor escreva um comando em um dos seguintes formatos: \n\tFOLLOW @username\n\tSEND message_to_send\n\n");
-// 		break;
-// 	}
-// 	return 0;
-// }
-//return 0;
-//}

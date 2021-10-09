@@ -85,14 +85,10 @@ void NotificationManager::tweetReceived(string user, string msg,int timestamp)
 
 
     newNotification.timestamp = timestamp;
-    newNotification.message = msg;
-
-    
+    newNotification.message = msg; 
 
     mtx.lock();
     newNotification.remainingFollowers = this->users[user].followersList.size();
-
-
         
     if(!this->users[user].notificationList.size())
     {
@@ -112,9 +108,11 @@ void NotificationManager::tweetReceived(string user, string msg,int timestamp)
     this->users[user].notificationList.push_back(newNotification); 
     for(auto itVec : this->users[user].followersList)
     {
+        newPending.sessions.clear();
         create_user_if_not_found(itVec);
         itSes = this->sessionsQty.find(itVec);
         found = itSes != this->sessionsQty.end();
+
         if(found)
         {
             newPending.sessions = this->sessionsQty[itVec];
@@ -128,8 +126,6 @@ void NotificationManager::tweetReceived(string user, string msg,int timestamp)
 
     }
     mtx.unlock();
-
-
 }
 
 bool NotificationManager::needsToSend(string username, int session)
@@ -138,8 +134,8 @@ bool NotificationManager::needsToSend(string username, int session)
     PendingNotification pendingNot;
     
     mtx.lock();
+
     if(this->users[username].pendingList.size() > 0){
-        
         for(auto pendingNot : this->users[username].pendingList){
             for (auto itSes = pendingNot.sessions.begin(); itSes != pendingNot.sessions.end(); ++itSes){
                 if(*itSes == session)
@@ -161,13 +157,14 @@ packet NotificationManager::consumeTweet(string username,int session)
     PendingNotification foundNot;
     packet notificationPkt;
     bool shouldErase = false;
+    bool shouldBreak = false;
     vector<PendingNotification>::iterator itPending;
     mtx.lock();
+
     for(auto pendingNot = this->users[username].pendingList.begin(); pendingNot != this->users[username].pendingList.end(); ++pendingNot ){
         for (auto itSes = (*pendingNot).sessions.begin(); itSes != (*pendingNot).sessions.end(); ++itSes){
             if(*itSes == session)
-            {
-                
+            {                
                 foundNot = (*pendingNot);
                 this->users[username].pendingList[distance(this->users[username].pendingList.begin(),pendingNot)].sessions.erase(itSes);
                 if(this->users[username].pendingList[distance(this->users[username].pendingList.begin(),pendingNot)].sessions.size() == 0)
@@ -177,9 +174,15 @@ packet NotificationManager::consumeTweet(string username,int session)
                     shouldErase = true;
                 }
                 
+                shouldBreak = true;
                 break;
             }
-        }   
+        }
+
+        if (shouldBreak) 
+        {
+            break;
+        }
     }
     //this->users[username].pendingList.erase(this->users[username].pendingList.begin());    
     //for (auto itVet : this->users[pendingNot.sender].notificationList)

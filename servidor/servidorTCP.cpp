@@ -37,22 +37,21 @@ void *thread_tweet_to_client(void *args)
 	localsockfd = *newsockfd;
 	packet pkt;
 	string username = string(arg->username);
+
 	while (arg->connected)
 	{
 		sleep(1);
 		if (notificationManager->needsToSend(username,session_id))
 		{ 
-
 			pkt = notificationManager->consumeTweet(username,session_id);;
 			n = write(localsockfd, &pkt, sizeof(pkt));
 
 			if (n < 0)
 				printf("ERROR writing to socket");
-			
 		}
 	}
 
-	
+	return 0;
 }
 
 void *thread_read_client(void *args)
@@ -144,6 +143,7 @@ void *thread_read_client(void *args)
 	}
 
 	close(localsockfd);
+	return 0;
 }
 
 

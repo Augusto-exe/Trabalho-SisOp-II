@@ -48,6 +48,10 @@ void Tweetar(char *mensagem, char* username, int seqn)
 
 void SeguirPerfil(char *perfilQueSegue, char *perfilSeguido, int seqn)
 {
+    if (string(perfilQueSegue) == string(perfilSeguido)) {
+        cout << "Nao eh possivel seguir a si mesmo" << endl;
+    }
+
     printf("Seguir perfil: %s\n", perfilSeguido);
     string msg_str = string(perfilSeguido);
     msg_str.erase(0, 1); // Remove o espaço q ta ficando no primeiro caracter

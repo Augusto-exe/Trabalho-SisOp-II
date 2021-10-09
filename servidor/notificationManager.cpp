@@ -49,8 +49,7 @@ void NotificationManager::create_user_if_not_found(string user)
 bool NotificationManager::follow(string user, string followedUser)
 {
     mtx.lock();
-    // cout << "A mimir (" << user << " tentando seguir " << followedUser << ")" << endl;
-    // this_thread::sleep_for(chrono::milliseconds(20000));
+
     create_user_if_not_found(followedUser);
     if (user != followedUser) 
     {
@@ -184,8 +183,7 @@ packet NotificationManager::consumeTweet(string username,int session)
             break;
         }
     }
-    //this->users[username].pendingList.erase(this->users[username].pendingList.begin());    
-    //for (auto itVet : this->users[pendingNot.sender].notificationList)
+
     for (auto itVet = this->users[foundNot.sender].notificationList.begin(); itVet != this->users[foundNot.sender].notificationList.end(); ++itVet)
     {
         if((*itVet).id == foundNot.id)

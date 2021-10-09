@@ -1,11 +1,3 @@
 
-@a: @argel @augusto @nicolas
-@argel: @nicolas @augusto
-@augusto: @nicolas
-@b: @argel @augusto
-@matheus: @nicolas: @argel argel
-argel: @matheus teste teste2
-argelxd: @matheus
-matheus:
-teste: teste2:
-teste2:
+@argel:
+@matheus: @argel

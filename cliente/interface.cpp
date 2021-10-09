@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
             char *ptr = strtok(comando, delim);
 
             bool eh_primeira_iteracao = true;
-            int tipo_comando = -1; // nao sei chamar o .h, entao n consegui criar enum
+            int tipo_comando = -1;
             char resto_do_comando[200] = "";
             while (ptr != NULL)
             {

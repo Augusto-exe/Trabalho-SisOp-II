@@ -45,8 +45,8 @@ public:
     NotificationManager();
     bool follow(string user, string followedUser);
     void tweetReceived(string user, string msg,int timestamp);
-    bool needsToSend(string username);
-    packet consumeTweet(string username);
+    bool needsToSend(string username,int session);
+    packet consumeTweet(string username,int session);
     int add_session(string username);
     bool del_session(string username, int session);
     UserMap users;

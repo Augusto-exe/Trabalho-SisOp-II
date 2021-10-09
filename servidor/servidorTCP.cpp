@@ -33,21 +33,22 @@ typedef struct new_thread_args
 void *thread_tweet_to_client(void *args)
 {
 	struct new_thread_args *arg = (struct new_thread_args *)args;
-	int n = 1, localsockfd, *newsockfd = (int *)arg->socket;
+	int n = 1, localsockfd, *newsockfd = (int *)arg->socket, session_id = arg->sessionID;
 	localsockfd = *newsockfd;
 	packet pkt;
 	string username = string(arg->username);
 	while (arg->connected)
 	{
-		if (notificationManager->needsToSend(username))
+		sleep(1);
+		if (notificationManager->needsToSend(username,session_id))
 		{ 
 
-			pkt = notificationManager->consumeTweet(username);;
+			pkt = notificationManager->consumeTweet(username,session_id);;
 			n = write(localsockfd, &pkt, sizeof(pkt));
 
 			if (n < 0)
 				printf("ERROR writing to socket");
-			sleep(2);
+			
 		}
 	}
 
@@ -107,19 +108,21 @@ void *thread_read_client(void *args)
 			strcpy(pkt._payload, session_id != -1 ? "1" : "0");
 			pkt.length = strlen(pkt._payload);
 			pkt.timestamp = std::time(0);
-
+			
 			if (session_id == -1)
 			{
 				printf("Login error\n");	
 			}
 			else
 			{
+
 				arg->username =(char*) malloc(16*sizeof(char));
 				printf("\nUser %s logged in.\n", pkt.user);
 				strcpy(arg->username, localUserName);
 				arg->sessionID = session_id;
-		
+				
 				pthread_create(&clientThread, NULL, thread_tweet_to_client, (void*) arg);
+				
 			}
 
 			if (n < 0)

@@ -160,7 +160,7 @@ packet NotificationManager::consumeTweet(string username,int session)
 {
     PendingNotification foundNot;
     packet notificationPkt;
-    bool erased = false;
+    bool shouldErase = false;
     vector<PendingNotification>::iterator itPending;
     mtx.lock();
     for(auto pendingNot = this->users[username].pendingList.begin(); pendingNot != this->users[username].pendingList.end(); ++pendingNot ){
@@ -174,8 +174,7 @@ packet NotificationManager::consumeTweet(string username,int session)
                 {
                 
                     itPending = pendingNot;
-                    erased = true;
-                    
+                    shouldErase = true;
                 }
                 
                 break;
@@ -183,15 +182,19 @@ packet NotificationManager::consumeTweet(string username,int session)
         }   
     }
     //this->users[username].pendingList.erase(this->users[username].pendingList.begin());    
-    
-    
-    
     //for (auto itVet : this->users[pendingNot.sender].notificationList)
     for (auto itVet = this->users[foundNot.sender].notificationList.begin(); itVet != this->users[foundNot.sender].notificationList.end(); ++itVet)
     {
         if((*itVet).id == foundNot.id)
         {   
-            if(erased){
+            strcpy(notificationPkt._payload, (*itVet).message.c_str());
+            notificationPkt.type = TIPO_NOTI;
+            notificationPkt.timestamp = (*itVet).timestamp;
+            strcpy(notificationPkt.user, foundNot.sender.c_str());
+            notificationPkt.length = strlen(notificationPkt._payload);
+
+            if(shouldErase)
+            {
                 this->users[username].pendingList.erase(itPending);
                 (*itVet).remainingFollowers -=1;
                 if((*itVet).remainingFollowers == 0)
@@ -199,11 +202,6 @@ packet NotificationManager::consumeTweet(string username,int session)
                     this->users[foundNot.sender].notificationList.erase(itVet);
                 }
             }
-            strcpy(notificationPkt._payload, (*itVet).message.c_str());
-            notificationPkt.type = TIPO_NOTI;
-            notificationPkt.timestamp = (*itVet).timestamp;
-            strcpy(notificationPkt.user, foundNot.sender.c_str());
-            notificationPkt.length = strlen(notificationPkt._payload);
             
             break;
         } 

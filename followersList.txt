@@ -3,4 +3,7 @@
 @argel: @nicolas @augusto
 @augusto: @nicolas
 @b: @argel @augusto
+@matheus:
 @nicolas: @argel
+argel: @matheus
+argelxd: @matheus

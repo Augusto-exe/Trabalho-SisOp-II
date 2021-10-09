@@ -33,6 +33,13 @@ bool IniciarSessao(char *perfil, char *end_servidor, char *porta)
 void Tweetar(char *mensagem, char* username, int seqn)
 {
     printf("Tweetar a mensagem: %s\n", mensagem);
+
+    // string uses 2 extra bytes
+    if (string(mensagem).length() > 130) 
+    {
+        cout << "The character limit is 128" << endl;
+        return;
+    }
     string msg_str = string(mensagem);
     msg_str.erase(0, 1); // Remove o espaço q ta ficando no primeiro caracter
     msg_str.pop_back();

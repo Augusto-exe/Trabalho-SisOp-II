@@ -1,5 +1,41 @@
 Trabalho SisOp II
 
+## Requisitos
+
+- g++
+- make
+
+## Como rodar
+
+Na pasta raíz do projeto:
+
+Compilar:
+
+`make`
+
+Rodar servidor:
+
+`./servidorTCP`
+
+Rodar clientes:
+
+`./clienteTCP [username] [endereco] 4000`
+
+Ex:
+
+`./clienteTCP @weverton localhost 4000`
+
+## Utilização do Client
+
+Comandos:
+
+Para seguir um usuário:
+`FOLLOW [username]`
+
+Para enviar uma mensagem de até 128 caracteres aos seus seguidores:
+`SEND [message]`
+
+
 ## Bugs conhecidos
 
 [x] Às vezes as mensagens nao chegam corretamente pra todos. Um sempre recebe corretamente, porem as vezes o outro recebe a mensagem com conteudo errado (um caracter estranho e mais nada).

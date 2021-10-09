@@ -71,6 +71,13 @@ int main(int argc, char *argv[])
         char *perfil = argv[1];
         char *end_servidor = argv[2];
         char *porta = argv[3];
+
+        if (string(perfil).length() > 16)
+        {
+            cout << "Username nao pode exceder 16 caracteres." << endl;
+            return 1;
+        }
+
         bool login_success = IniciarSessao(perfil, end_servidor, porta);
 
         if (!login_success)

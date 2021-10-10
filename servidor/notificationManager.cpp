@@ -237,7 +237,7 @@ UserMap NotificationManager::openFile()
 {
     ifstream stream;
     string username, follower, followers;
-
+    char c;
     UserMap users;
 
     stream.open("followersList.txt");
@@ -246,16 +246,19 @@ UserMap NotificationManager::openFile()
     while (stream.good())
     {
         getline(stream, username, ':');
-        stream.ignore();
-        getline(stream, followers);
-        istringstream iss(followers);
-        cout << username << ":";
-        while(getline(iss, follower, ' '))
+        stream.get(c);
+        if(c == ' ')
         {
-            cout << " " << follower;
-            users[username].followersList.push_back(follower);
-        }
-        cout << endl;
+            getline(stream, followers);
+            istringstream iss(followers);
+            cout << username << ":";
+            while(getline(iss, follower, ' '))
+            {
+                cout << " " << follower;
+                users[username].followersList.push_back(follower);
+            }
+            cout << endl; 
+        } 
     }
     stream.close();
 

@@ -98,12 +98,12 @@ void NotificationManager::tweetReceived(string user, string msg,int timestamp)
         lastNotification = this->users[user].notificationList.back();
         newNotification.id = lastNotification.id + 1;    
     }
-    mtx.unlock();
+
 
     newPending.id = newNotification.id;
     newPending.sender = user;
 
-    mtx.lock();
+
     this->users[user].notificationList.push_back(newNotification); 
     for(auto itVec : this->users[user].followersList)
     {

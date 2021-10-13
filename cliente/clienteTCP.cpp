@@ -80,12 +80,12 @@ bool ClientTCP::start_connection()
 	serv_addr.sin_port = htons(atoi(porta));
 	serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
 	bzero(&(serv_addr.sin_zero), 8);
-
+	//inicia conexão com o servidor
 	if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
 		printf("ERROR connecting\n");
 
 	packet pkt;
-
+	//gera pacote de login
 	pkt.type = TIPO_LOGIN;
 	pkt.seqn = 0;
 	pkt.length = strlen(perfil);
@@ -99,6 +99,7 @@ bool ClientTCP::start_connection()
 	if (n < 0)
 		printf("ERROR writing to socket\n");
 
+	//le respota do servidor e verifica se sessão pode ser iniciada
 	n = read(sockfd, &pkt, sizeof(pkt));
 	if (n < 0)
 		printf("[start_connection] ERROR reading from socket\n");
@@ -141,6 +142,7 @@ void *ClientTCP::thread_read_client(void *socket)
 		}
 		else
 		{
+			//caso receba pacote de notificação o exibe na tela.
 			if (pkt.type == TIPO_NOTI)
 				printf("\n\nNEW NOTIFICATION from user %s:\n%s\n\n", pkt.user, pkt._payload);
 		}

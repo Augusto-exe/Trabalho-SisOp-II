@@ -41,8 +41,10 @@ void *thread_tweet_to_client(void *args)
 	while (arg->connected)
 	{
 		sleep(1);
+		//verifica se precisa enviar tweet ao cliente
 		if (notificationManager->needsToSend(username,session_id))
 		{ 
+			//consome tweet e envia ao cliente
 			pkt = notificationManager->consumeTweet(username,session_id);;
 			n = write(localsockfd, &pkt, sizeof(pkt));
 
@@ -78,9 +80,11 @@ void *thread_read_client(void *args)
 			arg->connected = false;
 		}
 
+		//verifica tipo de pacote recebido e trata de acordo
 		switch (pkt.type)
 		{
 		case (TIPO_DISC):
+			//caso seja de desconexão coloca connected em 0, deleta a sessão 
 			cout << "User " << localUserName << " logged out." << endl;
 			arg->connected = false;
 			if (sessionUser != NULL)
@@ -90,17 +94,17 @@ void *thread_read_client(void *args)
 			}
 			break;
 		case (TIPO_SEND):
-			//insertMessage(pkt.user,pkt._payload);
-			//cout << "recebi uma msg " << pkt._payload << " do usuario " << pkt.user << endl;
+			//produz uma notificação de acordo com o pacote recebido
 			notificationManager->tweetReceived(string(pkt.user),string(pkt._payload),pkt.timestamp);
-			// vai popular alguma coisa que o needsToSend vai ler
+
 			break;
 		case (TIPO_LOGIN):
 		{
+			//verifica se o usuário pode logar
 			sessionUser = strdup(pkt.user);
 			session_id = notificationManager->add_session(string(sessionUser));
 
-
+			//gera pacote de resposta
 			strcpy(localUserName, pkt.user);
 			pkt.type = TIPO_PERMISSAO_CON;
 			pkt.seqn = 2;
@@ -114,7 +118,7 @@ void *thread_read_client(void *args)
 			}
 			else
 			{
-
+				//Caso usuário possa se conectar inicializa thread para envio de tweets
 				arg->username =(char*) malloc(16*sizeof(char));
 				printf("\nUser %s logged in.\n", pkt.user);
 				strcpy(arg->username, localUserName);
@@ -183,7 +187,7 @@ int main(int argc, char *argv[])
 
 		args->socket = &newsockfd;
 		args->connected = true;
-
+		//cria thread de leitura que lida com mensagens vindas do cliente
 		pthread_create(&clientThread, NULL, thread_read_client, (void*) args);
 		
 	}

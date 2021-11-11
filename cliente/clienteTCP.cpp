@@ -16,6 +16,9 @@
 #include "./clienteTCP.hpp"
 
 bool connected = true;
+bool newSocket = false;
+int sockfd;
+
 packet disc_pkt = {TIPO_DISC, 0, 5, 0, "adm", "Disc"};
 
 using namespace std;
@@ -47,6 +50,13 @@ void ClientTCP::end_connection(int signum)
 	close(sockfd);
 	exit(signum);
 }
+void ClientTCP::sendPendingMessages()
+{
+	for(packet pkt : this->pendingMessages)
+	{
+		write(sockfd, &pkt, sizeof(pkt));
+	}
+}
 
 void ClientTCP::send_message(string message, string username, int seqn, int messageType)
 {
@@ -58,7 +68,32 @@ void ClientTCP::send_message(string message, string username, int seqn, int mess
 	pkt.length = strlen(pkt._payload);
 	pkt.timestamp = std::time(0);
 
-	write(sockfd, &pkt, sizeof(pkt));
+	if(connected)
+	{
+		write(sockfd, &pkt, sizeof(pkt));
+	}
+	else
+	{
+		pendingMessages.push_back(pkt);
+	}
+	
+}
+void* ClientTCP::waitForReconnection(void* args)
+{
+		packet localPkt;
+		socklen_t clilen;
+		int newsockfd;
+		struct sockaddr_in serv_addr;
+		// listen to the clients
+		listen(sockfd, 5);
+		clilen = sizeof(struct sockaddr_in);
+		if ((newsockfd = accept(sockfd, (struct sockaddr *)&serv_addr, &clilen)) == -1)
+			printf("ERROR on accept");
+		memset(&localPkt, 0, sizeof(localPkt));
+
+		sockfd = newsockfd;
+		connected = true;
+
 }
 
 bool ClientTCP::start_connection()
@@ -124,7 +159,7 @@ bool ClientTCP::start_connection()
 
 void *ClientTCP::thread_read_client(void *socket)
 {
-
+	pthread_t clientThread;
 	int n, localsockfd, *newsockfd = (int *)socket;
 	localsockfd = *newsockfd;
 
@@ -137,8 +172,6 @@ void *ClientTCP::thread_read_client(void *socket)
 		if (n <= 0) {
 			printf("[thread_read_client] ERROR reading from socket. Disconnecting...\n");
 			connected = false;
-			close(localsockfd);
-			exit(SIGINT);
 		}
 		else
 		{
@@ -147,6 +180,21 @@ void *ClientTCP::thread_read_client(void *socket)
 				printf("\n\nNEW NOTIFICATION from user %s:\n%s\n\n", pkt.user, pkt._payload);
 		}
 	}
+
+	//if the connection was lost we wait for the new RM to connect
+	packet localPkt;
+	socklen_t clilen;
+	int newsockServer;
+	struct sockaddr_in serv_addr;
+	listen(sockfd, 5);
+	clilen = sizeof(struct sockaddr_in);
+	if ((newsockServer = accept(sockfd, (struct sockaddr *)&serv_addr, &clilen)) == -1)
+		printf("ERROR on accept");
+	memset(&localPkt, 0, sizeof(localPkt));
+
+	sockfd = newsockServer;
+	connected = true;
+
 
 	return 0;
 }

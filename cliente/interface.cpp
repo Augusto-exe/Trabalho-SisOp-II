@@ -6,6 +6,7 @@
 #include "clienteTCP.hpp"
 
 using namespace std;
+extern int connected;
 
 ClientTCP *clienteTCP;
 
@@ -90,7 +91,9 @@ int main(int argc, char *argv[])
             char comando[200];
             printf("Por favor insira um comando:\n");
             fgets(comando, 200, stdin);
-
+            if(connected ==true && (*clienteTCP).pendingMessages.size()>0)
+                clienteTCP->sendPendingMessages();
+                
             char delim[] = " ";
 
             char *ptr = strtok(comando, delim);

@@ -6,6 +6,7 @@
 #include <string.h>
 #include <string>
 #include <unistd.h>
+#include <vector>
 #include <sys/types.h>
 #include <pthread.h> 
 #include <sys/socket.h>
@@ -27,14 +28,17 @@ class ClientTCP
 		void end_connection(int signum);
 		bool start_connection();
 		void send_message(string message, string username, int seqn, int messageType);
+		void sendPendingMessages();
+		vector<packet> pendingMessages;
 
 	private:
-		int sockfd;
 		pthread_t clientThread;
 		char* perfil;
 		char* end_servidor;
 		char* porta;
-		static void *thread_read_client(void *socket);
+		static void* thread_read_client(void *socket);
+		static void* waitForReconnection(void* args);
+		
 
 };
 

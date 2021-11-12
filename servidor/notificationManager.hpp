@@ -10,6 +10,7 @@
 
 using namespace std;
 
+
 struct pendingNotification
 {
     string sender;
@@ -17,8 +18,10 @@ struct pendingNotification
     vector<int> sessions;
 };
 typedef struct pendingNotification PendingNotification;
+typedef struct sockaddr_in Sockaddr_in;
 
 typedef std::map<string, vector<int>> SessionMap;
+typedef std::map<string, Sockaddr_in> SessionAddressMap;
 
 struct notification
 {
@@ -47,10 +50,11 @@ public:
     void tweetReceived(string user, string msg,int timestamp);
     bool needsToSend(string username,int session);
     packet consumeTweet(string username,int session);
-    int add_session(string username);
+    int add_session(string username, Sockaddr_in a);
     bool del_session(string username, int session);
     UserMap users;
     SessionMap sessionsQty;
+    SessionAddressMap sessionAddresses;
     
 private:
     void create_user_if_not_found(string user);

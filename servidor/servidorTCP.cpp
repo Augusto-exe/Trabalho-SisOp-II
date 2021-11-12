@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <signal.h>
+#include <memory>
 #include "../common.h"
 #include "./notificationManager.hpp"
 
@@ -28,6 +29,7 @@ typedef struct new_thread_args
 	int sessionID;
 	bool connected;
 	char* username;
+	struct sockaddr_in socketAddress;
 } new_thread_args;
 
 void *thread_tweet_to_client(void *args)
@@ -63,6 +65,7 @@ void *thread_read_client(void *args)
 
 	void *socket = arg->socket;
 	char *sessionUser;
+	Sockaddr_in socketAddress = arg->socketAddress;
 	int session_id;
 
 	int n, localsockfd, *newsockfd = (int *)socket;
@@ -102,7 +105,8 @@ void *thread_read_client(void *args)
 		{
 			//verifica se o usuário pode logar
 			sessionUser = strdup(pkt.user);
-			session_id = notificationManager->add_session(string(sessionUser));
+
+			session_id = notificationManager->add_session(string(sessionUser), socketAddress);
 
 			//gera pacote de resposta
 			strcpy(localUserName, pkt.user);
@@ -173,6 +177,7 @@ int main(int argc, char *argv[])
 		printf("ERROR on binding");
 
 	new_thread_args *args;
+	
 
 	while (true)
 	{
@@ -184,7 +189,7 @@ int main(int argc, char *argv[])
 			printf("ERROR on accept");
 		memset(&pkt, 0, sizeof(pkt));
 
-
+		args->socketAddress = cli_addr;
 		args->socket = &newsockfd;
 		args->connected = true;
 		//cria thread de leitura que lida com mensagens vindas do cliente

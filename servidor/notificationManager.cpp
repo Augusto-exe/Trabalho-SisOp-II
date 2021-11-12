@@ -10,6 +10,8 @@
 #include <chrono>
 #include <thread>
 #include <bits/stdc++.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include "./notificationManager.hpp"
 
 using namespace std;
@@ -284,7 +286,7 @@ UserMap NotificationManager::openFile()
 }
 
 // returns the sessionID or -1 if the connection failed
-int NotificationManager::add_session(string username)
+int NotificationManager::add_session(string username, Sockaddr_in sessionAddress)
 {
     
     // check if exist on map
@@ -296,6 +298,7 @@ int NotificationManager::add_session(string username)
     if (!found)
     {
         sessionsQty[username].push_back(1);
+        sessionAddresses[username + "#1"] = sessionAddress;
         SessionMap::iterator it = this->sessionsQty.find(username);
         return 1;
     }
@@ -313,9 +316,32 @@ int NotificationManager::add_session(string username)
     
     //  increment the current value and return true
     if(current.front() == 1)  //TO-DO: arrumar pra ficar generalizado para N sessões
+    { 
         it->second.push_back(2);
-    else
+        sessionAddresses[username + "#2"] = sessionAddress;
+    }
+    else 
+    {
         it->second.push_back(1);
+        sessionAddresses[username + "#1"] = sessionAddress;
+    }
+
+    for (auto &session : sessionsQty)
+    {
+        cout << "username: " << session.first << endl;
+        for (auto &sessionId : session.second)
+        {
+            cout << "sessionId: " << sessionId << endl;
+        }
+    }
+
+    for (auto &sessionAddr : sessionAddresses)
+    {
+        cout << "username: " << sessionAddr.first << " port: " << 
+        sessionAddr.second.sin_port << " ip: " << 
+        sessionAddr.second.sin_addr.s_addr << endl;
+    }
+
     return it->second.back();
 }
 

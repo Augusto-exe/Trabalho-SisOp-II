@@ -7,6 +7,7 @@
 #define TIPO_FOLLOW		3
 #define TIPO_NOTI		4
 #define TIPO_PERMISSAO_CON 5 // provisorio
+#define TIPO_SERVER     6
 
 typedef struct __packet{
     uint16_t type; //Tipo do pacote (p.ex. DATA | CMD)

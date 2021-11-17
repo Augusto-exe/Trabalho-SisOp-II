@@ -6,12 +6,17 @@
 #include <pthread.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 #include <unistd.h>
 #include <iostream>
+#include <fstream>
 #include <cstdlib>
 #include <ctime>
+#include <string>
 #include <signal.h>
 #include <memory>
+#include <list>
 #include "../common.h"
 #include "./notificationManager.hpp"
 
@@ -20,6 +25,12 @@
 using namespace std;
 
 bool connected = true;
+bool leader = false;
+int id = 0;
+int leaderId = -1;
+list<int> serverSocketList;
+string read_server_addr;
+list<string> serverIps;
 
 NotificationManager *notificationManager;
 
@@ -154,10 +165,84 @@ void *thread_read_client(void *args)
 	return 0;
 }
 
+//Deve ser lnaçado e verificar se a eleição iniciou, caso tenha iniciado inicia o timer
+// e após o tempo do timer verifica se algum servidor respondeu. Se nenhum respondeu esse é o novo líder. Define a Flag como 1 e 
+//manda mensagem pra todos os servers 
+void* electionTimeoutManager(void *args)
+{
+
+}
+
+
+//essa thread deve ficar lendo e lidando com mensagens vindas de OUTROS SERVERS
+void* threadReadFromServerGroup(void *args)
+{
+
+}
+
+void tryToConnectToServerGroup()
+{
+	struct hostent *server;
+	struct sockaddr_in serv_addr;
+	int sockfd;
+	int countConnected =0;
+
+	ifstream serverFile("serverList.txt");
+	string addr_str,id_str,lim = "-";
+
+	for (std::string line; getline(serverFile, line); ) 
+	{
+		addr_str = line.substr(0, line.find("-"));
+		line.erase(0, line.find("-") + lim.length());
+		id_str = line.substr(0,line.find("-"));
+		if(addr_str == read_server_addr)
+			id = stoi(id_str);
+		else
+			serverIps.push_back( addr_str);
+
+		server = gethostbyname(addr_str.c_str());
+		if (server == NULL)
+		{
+			fprintf(stderr, "ERROR, no such host\n");
+			
+		}
+
+		if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+			printf("ERROR opening socket\n");
+
+		serv_addr.sin_family = AF_INET;
+		serv_addr.sin_port = htons(4000);
+		serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
+		bzero(&(serv_addr.sin_zero), 8);
+		//inicia conexão com o servidor
+		if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+			printf("ERROR connecting\n");
+		else
+		{
+			cout <<"connected to " << addr_str << endl;
+			countConnected +=1;
+			serverSocketList.push_back(sockfd);
+		}
+			
+		
+	}
+	if(countConnected == 0)
+	{
+		leader = true;
+		leaderId = id;
+	}
+	cout << endl <<"id encontrado: " << id << endl;
+	cout <<"Sou líder?" <<leader << endl;
+	for (auto sock :serverSocketList)
+	{
+		cout << sock << endl;
+	}
+	
+}
 
 int main(int argc, char *argv[])
 {
-
+	read_server_addr = string(argv[1]);
 	notificationManager = new NotificationManager();
 	int sockfd, newsockfd, n;
 	socklen_t clilen;
@@ -170,14 +255,15 @@ int main(int argc, char *argv[])
 
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(PORT);
-	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	inet_aton(read_server_addr.c_str(), &serv_addr.sin_addr);
+	//serv_addr.sin_addr.s_addr = INADDR_ANY;
 	bzero(&(serv_addr.sin_zero), 8);
 
 	if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
 		printf("ERROR on binding");
 
 	new_thread_args *args;
-	
+	tryToConnectToServerGroup();
 
 	while (true)
 	{
@@ -192,6 +278,8 @@ int main(int argc, char *argv[])
 		args->socketAddress = cli_addr;
 		args->socket = &newsockfd;
 		args->connected = true;
+		//ver um jeito de se for server lançar a thread de leitura própria -> pode ser aqui, ou dps de fazer a conexão mandar mensagem, enfim
+
 		//cria thread de leitura que lida com mensagens vindas do cliente
 		pthread_create(&clientThread, NULL, thread_read_client, (void*) args);
 		

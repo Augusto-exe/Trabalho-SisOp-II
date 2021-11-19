@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <fstream>
+#include <map>
 #include <cstdlib>
 #include <ctime>
 #include <string>
@@ -21,16 +22,21 @@
 #include "./notificationManager.hpp"
 
 #define PORT 4000
+#define ELECTION_TIMEOUT 3
 
 using namespace std;
 
 bool connected = true;
 bool leader = false;
+bool electionStarted = false;
+bool answerd = false;
+
 int id = 0;
 int leaderId = -1;
 list<int> serverSocketList;
 string read_server_addr;
 list<string> serverIps;
+map<int,int> socketToId;
 
 NotificationManager *notificationManager;
 
@@ -42,6 +48,25 @@ typedef struct new_thread_args
 	char* username;
 	struct sockaddr_in socketAddress;
 } new_thread_args;
+
+void sendCoordMsg(int socket)
+{
+	packet pkt;
+	pkt.type = TIPO_SERVER_COORD;
+	strcpy(pkt._payload, to_string(id).c_str());
+	strcpy(pkt.user, "server");
+	cout << "mandando msg de coord" << endl;
+	write(socket, &pkt, sizeof(pkt));
+}
+void sendMsgCoordAll()
+{
+
+}
+
+void sendMsgElection()
+{
+
+}
 
 void *thread_tweet_to_client(void *args)
 {
@@ -78,6 +103,7 @@ void *thread_read_client(void *args)
 	char *sessionUser;
 	Sockaddr_in socketAddress = arg->socketAddress;
 	int session_id;
+	int j;
 
 	int n, localsockfd, *newsockfd = (int *)socket;
 	localsockfd = *newsockfd;
@@ -86,13 +112,17 @@ void *thread_read_client(void *args)
 	packet pkt;
 	while (arg->connected)
 	{
+		pkt.type = -1;
 		/* read from the socket */
 		n = read(localsockfd, &pkt, sizeof(pkt));
-		if (n < 0)
+		if (n <= 0)
 		{
-			cout << "ERROR reading from socket" << endl;
+			if(socketToId[localsockfd] == leaderId)
+				cout<< "leader disconnected";
+			//cout << "ERROR reading from socket" << endl;
 			arg->connected = false;
 		}
+		cout <<"pkt received " << pkt.type<<endl;
 
 		//verifica tipo de pacote recebido e trata de acordo
 		switch (pkt.type)
@@ -154,8 +184,28 @@ void *thread_read_client(void *args)
 			// dar um follow = se adicionar a lista de seguires de alguem
 			// payload diz o 'alguem' e o user ja vem no pacote
 			
-			notificationManager->follow(string(pkt.user), string(pkt._payload));
+			notificationManager->follow(string(pkt.user), string(pkt._payload),leader);
 			break;
+		case(TIPO_SERVER):
+			serverSocketList.push_back(localsockfd);
+			socketToId[localsockfd] = atoi(pkt._payload);
+			cout<<"new server connected and added to list. ID = " << pkt._payload << endl;
+			break;
+		case(TIPO_SERVER_CONSUME):
+			break;
+		case(TIPO_SERVER_COORD):
+			leaderId = atoi(pkt._payload);
+			cout<< "LEADER: " << leaderId << endl;
+			break;
+		case(TIPO_SERVER_ANS):
+			electionStarted = false;
+			answerd = true;
+			break;
+		case(TIPO_SERVER_ELECTION):
+
+			break;
+		case (TIPO_SERVER_ADD_SES):
+		case (TIPO_SERVER_RMV_SES):
 		default:
 			break;
 		}
@@ -170,14 +220,24 @@ void *thread_read_client(void *args)
 //manda mensagem pra todos os servers 
 void* electionTimeoutManager(void *args)
 {
+	if(leaderId == -1)
+		electionStarted = true;
+	while(true)
+	{
+		if(electionStarted)
+		{
+			sendMsgElection();
+			sleep(ELECTION_TIMEOUT);
+			if(!answerd)
+			{
+				leaderId = id;
+				leader = true;
+				void sendMsgCoordAll();
+			}
 
-}
+		}
 
-
-//essa thread deve ficar lendo e lidando com mensagens vindas de OUTROS SERVERS
-void* threadReadFromServerGroup(void *args)
-{
-
+	}
 }
 
 void tryToConnectToServerGroup()
@@ -186,6 +246,10 @@ void tryToConnectToServerGroup()
 	struct sockaddr_in serv_addr;
 	int sockfd;
 	int countConnected =0;
+	packet pkt;
+	pkt.type = TIPO_SERVER;
+	strcpy(pkt.user,"server");
+	pkt.seqn = -1;
 
 	ifstream serverFile("serverList.txt");
 	string addr_str,id_str,lim = "-";
@@ -219,9 +283,12 @@ void tryToConnectToServerGroup()
 			printf("ERROR connecting\n");
 		else
 		{
-			cout <<"connected to " << addr_str << endl;
+			cout <<"connected to " << addr_str  <<" ID " << id_str << endl;
 			countConnected +=1;
 			serverSocketList.push_back(sockfd);
+			socketToId[sockfd] = stoi(id_str);
+			
+			
 		}
 			
 		
@@ -235,6 +302,8 @@ void tryToConnectToServerGroup()
 	cout <<"Sou líder?" <<leader << endl;
 	for (auto sock :serverSocketList)
 	{
+		strcpy(pkt._payload,to_string(id).c_str());
+		write(sock, &pkt, sizeof(pkt));
 		cout << sock << endl;
 	}
 	

@@ -48,7 +48,7 @@ void NotificationManager::create_user_if_not_found(string user)
     }
 }
 
-bool NotificationManager::follow(string user, string followedUser)
+bool NotificationManager::follow(string user, string followedUser,bool leader)
 {
     mtx.lock();
 
@@ -63,7 +63,8 @@ bool NotificationManager::follow(string user, string followedUser)
         {
             //Se o usuario ainda nao segue, adiciona user na lista de seguidores
             this->users[followedUser].followersList.push_back(user);
-            updateFile(this->users);
+            if(leader)
+                updateFile(this->users);
         }
         else 
         {

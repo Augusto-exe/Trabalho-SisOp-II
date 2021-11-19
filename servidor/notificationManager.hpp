@@ -46,7 +46,7 @@ class NotificationManager
 {
 public:
     NotificationManager();
-    bool follow(string user, string followedUser);
+    bool follow(string user, string followedUser,bool leader);
     void tweetReceived(string user, string msg,int timestamp);
     bool needsToSend(string username,int session);
     packet consumeTweet(string username,int session);

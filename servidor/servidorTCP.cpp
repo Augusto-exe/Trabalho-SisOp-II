@@ -323,7 +323,7 @@ void tryToConnectToServerGroup()
 		{
 			//cria thread de leitura que lida com mensagens vindas do server
 			pthread_create(&clientThread, NULL, thread_read_client, (void*) args);
-			cout <<"connected to " << addr_str  <<" ID " << id_str << endl;
+			cout <<"connected to " << addr_str  <<" ID " << id_str <<" socket: " << sockfd << endl;
 			countConnected +=1;
 			serverSocketList.push_back(sockfd);
 			socketToId[sockfd] = stoi(id_str);

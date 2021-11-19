@@ -64,11 +64,15 @@ void sendAnsMsg(int socket)
 	//cout << "mandando msg de coord - socket: "<< socket << endl;
 	
 	write_mtx.lock();
-	writed[socket] = true;
+	//writed[socket] = true;
 	write(socket, &pkt, sizeof(pkt));
 	write_mtx.unlock();
 	if (n < 0)
 		printf("ERROR writing to socket");
+}
+void reconnectToClients()
+{
+	
 }
 
 void sendCoordMsg(int socket)
@@ -81,7 +85,7 @@ void sendCoordMsg(int socket)
 	//cout << "mandando msg de coord - socket: "<< socket << endl;
 	
 	write_mtx.lock();
-	writed[socket] = true;
+	//writed[socket] = true;
 	write(socket, &pkt, sizeof(pkt));
 	write_mtx.unlock();
 	if (n < 0)
@@ -129,6 +133,57 @@ void sendMsgElection()
 		
 	}
 }
+void sendLoginToservers(packet pkt,int session_id)
+{
+	int n;
+	pkt.type = TIPO_SERVER_ADD_SES;
+	string payload = "";
+	payload +=to_string(session_id)+"-";
+	payload +=to_string(notificationManager->sessionAddresses[string(pkt.user) +"#"+to_string(session_id)].sin_addr.s_addr)+"-";
+	payload +=to_string(notificationManager->sessionAddresses[string(pkt.user) +"#"+to_string(session_id)].sin_port);
+	strcpy(pkt._payload, payload.c_str());
+	pkt.length = strlen(pkt._payload);
+	
+	//cout << "mandando msg de coord - socket: "<< socket << endl;
+	for(auto socket : serverSocketList)
+	{
+
+		write_mtx.lock();
+		//writed[socket] = true;
+		n = write(socket, &pkt, sizeof(pkt));
+		write_mtx.unlock();
+		if (n < 0)
+			printf("ERROR writing to socket");
+		
+		
+	}
+
+}
+
+void sendLogoutToServers(packet pkt,int session_id,string user)
+{
+	int n;
+	pkt.type = TIPO_SERVER_RMV_SES;
+	strcpy(pkt.user,user.c_str());
+	string payload = "";
+	payload +=to_string(session_id);
+	strcpy(pkt._payload, payload.c_str());
+	pkt.length = strlen(pkt._payload);
+	
+	//cout << "mandando msg de coord - socket: "<< socket << endl;
+	for(auto socket : serverSocketList)
+	{
+
+		write_mtx.lock();
+		//writed[socket] = true;
+		n = write(socket, &pkt, sizeof(pkt));
+		write_mtx.unlock();
+		if (n < 0)
+			printf("ERROR writing to socket");
+		
+		
+	}
+}
 
 void *thread_tweet_to_client(void *args)
 {
@@ -168,12 +223,13 @@ void *thread_read_client(void *args)
 	int electionID;
 	char *sessionUser;
 	Sockaddr_in socketAddress = arg->socketAddress;
+	string aux_addr,aux_port,aux_sess,lim,line;
 	int session_id;
 	int j;
 	char localUserName[16];
 	thread_mtx.unlock();
 	
-	packet pkt;
+	packet pkt, rcvPkt;
 	while (arg->connected)
 	{
 		pkt.type = -1;
@@ -204,7 +260,7 @@ void *thread_read_client(void *args)
 			write_mtx.unlock();
 			arg->connected = false;
 		}
-		
+		rcvPkt = pkt;
 
 		//cout <<"pkt received " << pkt.type<<endl;
 
@@ -215,6 +271,7 @@ void *thread_read_client(void *args)
 			//caso seja de desconexão coloca connected em 0, deleta a sessão 
 			cout << "User " << localUserName << " logged out." << endl;
 			arg->connected = false;
+			sendLogoutToServers(pkt,session_id,sessionUser);
 			if (sessionUser != NULL)
 			{
 
@@ -247,6 +304,7 @@ void *thread_read_client(void *args)
 			}
 			else
 			{
+				sendLoginToservers(pkt,session_id);
 				//Caso usuário possa se conectar inicializa thread para envio de tweets
 				arg->username =(char*) malloc(16*sizeof(char));
 				printf("\nUser %s logged in.\n", pkt.user);
@@ -261,8 +319,9 @@ void *thread_read_client(void *args)
 			{
 				printf("ERROR writing to socket\n");
 			}
+			
 			write_mtx.lock();
-			writed[localsockfd] = true;
+			//writed[localsockfd] = true;
 			n = write(localsockfd, &pkt, sizeof(pkt));
 			write_mtx.unlock();
 			break;
@@ -301,7 +360,21 @@ void *thread_read_client(void *args)
 				
 			break;
 		case (TIPO_SERVER_ADD_SES):
+			
+			lim="-";
+			line = string(pkt._payload);
+			//cout << pkt._payload << endl;
+			aux_sess = line.substr(0, line.find("-"));
+			line.erase(0, line.find("-") + lim.length());
+			aux_addr = line.substr(0, line.find("-"));
+			line.erase(0, line.find("-") + lim.length());
+			aux_port = line.substr(0,line.find("-"));
+			notificationManager->add_session_from_server(string(pkt.user),stoi(aux_sess),stoi(aux_addr),stoi(aux_port));
+			break;
 		case (TIPO_SERVER_RMV_SES):
+			cout << "deleting " << pkt.user <<" - " << pkt._payload << endl;
+			notificationManager->del_session(string(pkt.user),atoi(pkt._payload));
+			break;
 		default:
 			break;
 		}
@@ -328,6 +401,7 @@ void* electionTimeoutManager(void *args)
 				leader = true;
 				answerd = false;
 				sendMsgCoordAll();
+				reconnectToClients();
 			}
 			electionStarted = false;
 

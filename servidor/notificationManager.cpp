@@ -377,3 +377,19 @@ bool NotificationManager::del_session(string username,int session)
 
     return true;
 }
+
+int NotificationManager::add_session_from_server(string username, int session, in_addr_t addr, in_port_t port)
+{
+    Sockaddr_in sessionAddress;
+    sessionAddress.sin_port = port;
+    sessionAddress.sin_addr.s_addr = addr;
+    sessionAddresses[username + "#"+to_string(session)] = sessionAddress;
+    this->sessionsQty[username].push_back(session);
+
+    for (auto &sessionAddr : sessionAddresses)
+    {
+        cout << "username: " << sessionAddr.first << " port: " << 
+        sessionAddr.second.sin_port << " ip: " << 
+        sessionAddr.second.sin_addr.s_addr << endl;
+    }
+}

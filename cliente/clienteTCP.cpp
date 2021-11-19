@@ -191,7 +191,7 @@ void *ClientTCP::thread_read_client(void *socket)
 	if ((newsockServer = accept(sockfd, (struct sockaddr *)&serv_addr, &clilen)) == -1)
 		printf("ERROR on accept");
 	memset(&localPkt, 0, sizeof(localPkt));
-
+	cout << "reconnected" << endl;
 	sockfd = newsockServer;
 	connected = true;
 

@@ -52,6 +52,7 @@ public:
     packet consumeTweet(string username,int session);
     int add_session(string username, Sockaddr_in a);
     bool del_session(string username, int session);
+    int add_session_from_server(string username, int session, in_addr_t addr, in_port_t);
     UserMap users;
     SessionMap sessionsQty;
     SessionAddressMap sessionAddresses;

@@ -99,7 +99,7 @@ void reconnectToClients()
 		
 
 		cli_addr.sin_family = AF_INET;
-		cli_addr.sin_port = itMap.second.sin_port;
+		cli_addr.sin_port = htons(2000);
 		cli_addr.sin_addr = *((struct in_addr *)client->h_addr);
 		cli_addr.sin_addr.s_addr = itMap.second.sin_addr.s_addr;
 		bzero(&(cli_addr.sin_zero), 8);

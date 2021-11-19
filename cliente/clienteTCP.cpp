@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <iostream>
 #include <cstdlib>
@@ -18,6 +19,7 @@
 bool connected = true;
 bool newSocket = false;
 int sockfd;
+int listenSocket;
 
 packet disc_pkt = {TIPO_DISC, 0, 5, 0, "adm", "Disc"};
 
@@ -99,7 +101,18 @@ void* ClientTCP::waitForReconnection(void* args)
 bool ClientTCP::start_connection()
 {
 	struct hostent *server;
-	struct sockaddr_in serv_addr;
+	struct sockaddr_in serv_addr,cli_addr;
+	if ((listenSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+		printf("ERROR opening socket");
+
+	cli_addr.sin_family = AF_INET;
+	cli_addr.sin_port = htons(2000);
+	inet_aton("192.168.0.13", &serv_addr.sin_addr);
+	//serv_addr.sin_addr.s_addr = INADDR_ANY;
+	bzero(&(cli_addr.sin_zero), 8);
+
+	if (bind(listenSocket, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
+		printf("ERROR on binding\n");
 
 	server = gethostbyname(end_servidor);
 	if (server == NULL)
@@ -110,6 +123,9 @@ bool ClientTCP::start_connection()
 
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
 		printf("ERROR opening socket\n");
+	cli_addr.sin_port = htons(2001);
+	if (bind(sockfd, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
+		printf("ERROR on binding\n");
 
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(atoi(porta));
@@ -118,7 +134,7 @@ bool ClientTCP::start_connection()
 	//inicia conexão com o servidor
 	if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
 		printf("ERROR connecting\n");
-
+	printf("server port :%d\n",serv_addr.sin_port);
 	packet pkt;
 	//gera pacote de login
 	pkt.type = TIPO_LOGIN;
@@ -162,7 +178,7 @@ void *ClientTCP::thread_read_client(void *socket)
 	pthread_t clientThread;
 	int n, localsockfd, *newsockfd = (int *)socket;
 	localsockfd = *newsockfd;
-	int listenSocket = localsockfd;
+	
 	
 	packet pkt;
 	while (connected)
@@ -187,10 +203,13 @@ void *ClientTCP::thread_read_client(void *socket)
 	socklen_t clilen;
 	int newsockServer;
 	struct sockaddr_in serv_addr;
-	listen(listenSocket, 5);
+	n = listen(listenSocket, 5);
+	printf("n: %d err: %d\n",n,errno);
 	clilen = sizeof(struct sockaddr_in);
 	if ((newsockServer = accept(listenSocket, (struct sockaddr *)&serv_addr, &clilen)) == -1)
-		printf("ERROR on accept");
+	{
+		printf("ERROR on accept %d\n",errno);
+	}		
 	memset(&localPkt, 0, sizeof(localPkt));
 	cout << "reconnected" << endl;
 	sockfd = newsockServer;

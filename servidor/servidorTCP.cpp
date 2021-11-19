@@ -212,6 +212,25 @@ void sendLoginToservers(packet pkt,int session_id)
 
 }
 
+void forwardPacketsToServers(packet pkt)
+{
+	int n;
+	
+	//cout << "mandando msg de coord - socket: "<< socket << endl;
+	for(auto socket : serverSocketList)
+	{
+
+		write_mtx.lock();
+		//writed[socket] = true;
+		n = write(socket, &pkt, sizeof(pkt));
+		write_mtx.unlock();
+		if (n < 0)
+			printf("ERROR writing to socket");
+		
+		
+	}
+}
+
 void sendLogoutToServers(packet pkt,int session_id,string user)
 {
 	int n;
@@ -338,6 +357,8 @@ void *thread_read_client(void *args)
 			break;
 		case (TIPO_SEND):
 			//produz uma notificação de acordo com o pacote recebido
+			if(leader)
+				forwardPacketsToServers(pkt);
 			notificationManager->tweetReceived(string(pkt.user),string(pkt._payload),pkt.timestamp);
 
 			break;
@@ -387,7 +408,8 @@ void *thread_read_client(void *args)
 		case (TIPO_FOLLOW):
 			// dar um follow = se adicionar a lista de seguires de alguem
 			// payload diz o 'alguem' e o user ja vem no pacote
-			
+			if(leader)
+				forwardPacketsToServers(pkt);
 			notificationManager->follow(string(pkt.user), string(pkt._payload),leader);
 			break;
 		case(TIPO_SERVER):

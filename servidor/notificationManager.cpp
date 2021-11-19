@@ -373,6 +373,14 @@ bool NotificationManager::del_session(string username,int session)
             break;
         }
     }
+    for (auto itMap = this->sessionAddresses.begin() ; itMap != this->sessionAddresses.end(); ++itMap)
+    {
+        if((*itMap).first == username+"#"+to_string(session))
+        {
+            this->sessionAddresses.erase(itMap);
+            break;
+        }
+    }
   
 
     return true;

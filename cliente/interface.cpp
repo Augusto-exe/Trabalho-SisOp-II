@@ -16,12 +16,12 @@ void signal_callback_handler(int signum)
     clienteTCP->end_connection(signum);
 }
 
-bool IniciarSessao(char *perfil, char *end_servidor, char *porta)
+bool IniciarSessao(char *perfil, char *end_servidor, char *porta,string clientAddr)
 {
     printf("Iniciar sessao usando perfil %s, endereco de servidor %s e porta %s\n", perfil, end_servidor, porta);
     // chama algum metodo do clienteTCP, que vai tentar fazer a conexao e retornar != -1 se der certo.
     clienteTCP = new ClientTCP(perfil, end_servidor, porta);
-    bool success = clienteTCP->start_connection();
+    bool success = clienteTCP->start_connection(clientAddr);
     if (!success)
     {
         return false;
@@ -63,15 +63,16 @@ void SeguirPerfil(char *perfilQueSegue, char *perfilSeguido, int seqn)
 int main(int argc, char *argv[])
 {
     //set_sigint_callback
-    if (argc < 3)
+    if (argc < 4)
     {
-        printf("Para iniciar uma sessão, por favor use o comando nesse formato: ./app_cliente <perfil> <endereço do servidor> <porta>\n");
+        printf("Para iniciar uma sessão, por favor use o comando nesse formato: ./app_cliente <perfil> <endereço do servidor> <porta> <endereço do cliente>\n");
     }
     else
     {
         char *perfil = argv[1];
         char *end_servidor = argv[2];
         char *porta = argv[3];
+        string clientAddr = string(argv[4]);
 
         if (string(perfil).length() > 16)
         {
@@ -79,7 +80,7 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        bool login_success = IniciarSessao(perfil, end_servidor, porta);
+        bool login_success = IniciarSessao(perfil, end_servidor, porta,clientAddr);
 
         if (!login_success)
         {

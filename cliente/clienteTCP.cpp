@@ -98,21 +98,26 @@ void* ClientTCP::waitForReconnection(void* args)
 
 }
 
-bool ClientTCP::start_connection()
+bool ClientTCP::start_connection(string cliAdd)
 {
 	struct hostent *server;
-	struct sockaddr_in serv_addr,cli_addr;
+	struct sockaddr_in serv_addr,cli_addr,cli_addr2;
+	cout << cliAdd << endl;
 	if ((listenSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
 		printf("ERROR opening socket");
 
 	cli_addr.sin_family = AF_INET;
 	cli_addr.sin_port = htons(2000);
-	inet_aton("192.168.0.13", &serv_addr.sin_addr);
+	inet_aton(cliAdd.c_str(), &cli_addr.sin_addr);
 	//serv_addr.sin_addr.s_addr = INADDR_ANY;
 	bzero(&(cli_addr.sin_zero), 8);
 
 	if (bind(listenSocket, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
-		printf("ERROR on binding\n");
+	{
+		printf("1- RROR on binding - %d\n", errno);
+		exit(0);
+	}
+		
 
 	server = gethostbyname(end_servidor);
 	if (server == NULL)
@@ -123,9 +128,15 @@ bool ClientTCP::start_connection()
 
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
 		printf("ERROR opening socket\n");
-	cli_addr.sin_port = htons(2001);
-	if (bind(sockfd, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
-		printf("ERROR on binding\n");
+	cli_addr2.sin_family = AF_INET;
+	cli_addr2.sin_port = htons(3000);
+	inet_aton(cliAdd.c_str(), &cli_addr2.sin_addr);
+	//serv_addr.sin_addr.s_addr = INADDR_ANY;
+	if (bind(sockfd, (struct sockaddr *)&cli_addr2, sizeof(cli_addr2)) < 0)
+	{
+		printf("2 - ERROR on binding - %d\n", errno);
+		exit(0);
+	}
 
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(atoi(porta));
@@ -204,7 +215,6 @@ void *ClientTCP::thread_read_client(void *socket)
 	int newsockServer;
 	struct sockaddr_in serv_addr;
 	n = listen(listenSocket, 5);
-	printf("n: %d err: %d\n",n,errno);
 	clilen = sizeof(struct sockaddr_in);
 	if ((newsockServer = accept(listenSocket, (struct sockaddr *)&serv_addr, &clilen)) == -1)
 	{

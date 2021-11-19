@@ -2,5 +2,5 @@
 @augusto: @douglas
 @douglas: @pedro
 @marcos: @douglas
-@pedro: @douglas
+@pedro: @douglas @weverton
 @weverton: @marcos @pedro

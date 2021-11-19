@@ -207,7 +207,6 @@ void *ClientTCP::thread_read_client(void *socket)
 			}
 			else
 			{
-				cout << "recebeu" << endl;
 				//caso receba pacote de notificação o exibe na tela.
 				if (pkt.type == TIPO_NOTI)
 					printf("\n\nNEW NOTIFICATION from user %s:\n%s\n\n", pkt.user, pkt._payload);

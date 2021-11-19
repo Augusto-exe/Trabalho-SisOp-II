@@ -256,6 +256,31 @@ void sendLogoutToServers(packet pkt,int session_id,string user)
 	}
 }
 
+void sendConsumeToServers(string user,int session_id)
+{
+	packet pkt;
+	int n;
+	pkt.type = TIPO_SERVER_CONSUME;
+	strcpy(pkt.user,user.c_str());
+	string payload = "";
+	payload +=to_string(session_id);
+	strcpy(pkt._payload, to_string(session_id).c_str());
+	pkt.length = strlen(pkt._payload);
+	
+	//cout << "mandando msg de coord - socket: "<< socket << endl;
+	for(auto socket : serverSocketList)
+	{
+		write_mtx.lock();
+		writed[socket] = true;
+		n = write(socket, &pkt, sizeof(pkt));
+		write_mtx.unlock();
+		if (n < 0)
+			printf("ERROR writing to socket");
+		
+		
+	}
+}
+
 void *thread_tweet_to_client(void *args)
 {
 	struct new_thread_args *arg = (struct new_thread_args *)args;
@@ -271,6 +296,7 @@ void *thread_tweet_to_client(void *args)
 		if (leader && notificationManager->needsToSend(username,session_id))
 		{ 
 			//consome tweet e envia ao cliente
+			sendConsumeToServers(username,session_id);
 			pkt = notificationManager->consumeTweet(username,session_id);
 			write_mtx.lock();
 			writed[localsockfd] = true;
@@ -422,13 +448,13 @@ void *thread_read_client(void *args)
 			}
 			break;
 		case(TIPO_SERVER_CONSUME):
+			notificationManager->consumeTweet(string(pkt.user),atoi(pkt._payload));
 			break;
 		case(TIPO_SERVER_COORD):
 			leaderId = atoi(pkt._payload);
 			cout<< "LEADER: " << leaderId << endl;
 			break;
 		case(TIPO_SERVER_ANS):
-			
 			answerd = true;
 			break;
 		case(TIPO_SERVER_ELECTION):

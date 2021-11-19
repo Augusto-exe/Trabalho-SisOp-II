@@ -18,6 +18,7 @@
 #include <signal.h>
 #include <memory>
 #include <list>
+#include <mutex>
 #include "../common.h"
 #include "./notificationManager.hpp"
 
@@ -30,6 +31,9 @@ bool connected = true;
 bool leader = false;
 bool electionStarted = false;
 bool answerd = false;
+
+mutex write_mtx;
+bool writed = false;
 
 int id = 0;
 int leaderId = -1;
@@ -51,12 +55,18 @@ typedef struct new_thread_args
 
 void sendCoordMsg(int socket)
 {
+	int n;
 	packet pkt;
 	pkt.type = TIPO_SERVER_COORD;
 	strcpy(pkt._payload, to_string(id).c_str());
 	strcpy(pkt.user, "server");
-	cout << "mandando msg de coord" << endl;
+	cout << "mandando msg de coord - socket: "<< socket << endl;
+	if (n < 0)
+		printf("ERROR writing to socket");
+	write_mtx.lock();
+	writed = true;
 	write(socket, &pkt, sizeof(pkt));
+	write_mtx.unlock();
 }
 void sendMsgCoordAll()
 {
@@ -80,11 +90,14 @@ void *thread_tweet_to_client(void *args)
 	{
 		sleep(1);
 		//verifica se precisa enviar tweet ao cliente
-		if (notificationManager->needsToSend(username,session_id))
+		if (leader && notificationManager->needsToSend(username,session_id))
 		{ 
 			//consome tweet e envia ao cliente
-			pkt = notificationManager->consumeTweet(username,session_id);;
+			pkt = notificationManager->consumeTweet(username,session_id);
+			write_mtx.lock();
+			writed = true;
 			n = write(localsockfd, &pkt, sizeof(pkt));
+			write_mtx.unlock();
 
 			if (n < 0)
 				printf("ERROR writing to socket");
@@ -98,17 +111,16 @@ void *thread_read_client(void *args)
 {
 	struct new_thread_args *arg = (struct new_thread_args *)args;
 	pthread_t clientThread;
-
+	
 	void *socket = arg->socket;
 	char *sessionUser;
 	Sockaddr_in socketAddress = arg->socketAddress;
 	int session_id;
 	int j;
-
 	int n, localsockfd, *newsockfd = (int *)socket;
 	localsockfd = *newsockfd;
 	char localUserName[16];
-
+	cout << "abrindo thread de leitura no sock: " << localsockfd <<endl;;
 	packet pkt;
 	while (arg->connected)
 	{
@@ -117,12 +129,25 @@ void *thread_read_client(void *args)
 		n = read(localsockfd, &pkt, sizeof(pkt));
 		if (n <= 0)
 		{
-			if(socketToId[localsockfd] == leaderId)
-				cout<< "leader disconnected";
-			//cout << "ERROR reading from socket" << endl;
+			write_mtx.lock();
+			if(writed)
+			{
+				
+				writed = false;
+				
+			}
+			else
+			{
+				if(socketToId[localsockfd] == leaderId)
+					cout<< "leader disconnected";
+				cout << "ERROR reading from socket with id" << socketToId[localsockfd]<< endl;
+			}
+			write_mtx.unlock();
 			arg->connected = false;
 		}
-		cout <<"pkt received " << pkt.type<<endl;
+		
+
+		//cout <<"pkt received " << pkt.type<<endl;
 
 		//verifica tipo de pacote recebido e trata de acordo
 		switch (pkt.type)
@@ -177,7 +202,10 @@ void *thread_read_client(void *args)
 			{
 				printf("ERROR writing to socket\n");
 			}
+			write_mtx.lock();
+			writed = true;
 			n = write(localsockfd, &pkt, sizeof(pkt));
+			write_mtx.unlock();
 			break;
 		}
 		case (TIPO_FOLLOW):
@@ -189,7 +217,11 @@ void *thread_read_client(void *args)
 		case(TIPO_SERVER):
 			serverSocketList.push_back(localsockfd);
 			socketToId[localsockfd] = atoi(pkt._payload);
-			cout<<"new server connected and added to list. ID = " << pkt._payload << endl;
+			cout<<"new server connected and added to list. ID = " << pkt._payload << " socket :"<< localsockfd<< endl;
+			if(leader)
+			{
+				sendCoordMsg(localsockfd);
+			}
 			break;
 		case(TIPO_SERVER_CONSUME):
 			break;
@@ -247,15 +279,18 @@ void tryToConnectToServerGroup()
 	int sockfd;
 	int countConnected =0;
 	packet pkt;
+	pthread_t clientThread;
 	pkt.type = TIPO_SERVER;
 	strcpy(pkt.user,"server");
 	pkt.seqn = -1;
-
+	new_thread_args *args;
+	
 	ifstream serverFile("serverList.txt");
 	string addr_str,id_str,lim = "-";
 
 	for (std::string line; getline(serverFile, line); ) 
 	{
+		args = (new_thread_args*) malloc(sizeof(new_thread_args));
 		addr_str = line.substr(0, line.find("-"));
 		line.erase(0, line.find("-") + lim.length());
 		id_str = line.substr(0,line.find("-"));
@@ -280,15 +315,20 @@ void tryToConnectToServerGroup()
 		bzero(&(serv_addr.sin_zero), 8);
 		//inicia conexão com o servidor
 		if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+		{
 			printf("ERROR connecting\n");
+			close(sockfd);
+		}			
 		else
 		{
+			//cria thread de leitura que lida com mensagens vindas do server
+			pthread_create(&clientThread, NULL, thread_read_client, (void*) args);
 			cout <<"connected to " << addr_str  <<" ID " << id_str << endl;
 			countConnected +=1;
 			serverSocketList.push_back(sockfd);
 			socketToId[sockfd] = stoi(id_str);
-			
-			
+			args->socket = &sockfd;
+			args->connected = true;	
 		}
 			
 		
@@ -303,8 +343,10 @@ void tryToConnectToServerGroup()
 	for (auto sock :serverSocketList)
 	{
 		strcpy(pkt._payload,to_string(id).c_str());
+		write_mtx.lock();
+		writed = true;
 		write(sock, &pkt, sizeof(pkt));
-		cout << sock << endl;
+		write_mtx.unlock();
 	}
 	
 }
@@ -350,6 +392,7 @@ int main(int argc, char *argv[])
 		//ver um jeito de se for server lançar a thread de leitura própria -> pode ser aqui, ou dps de fazer a conexão mandar mensagem, enfim
 
 		//cria thread de leitura que lida com mensagens vindas do cliente
+
 		pthread_create(&clientThread, NULL, thread_read_client, (void*) args);
 		
 	}

@@ -33,6 +33,7 @@ bool electionStarted = false;
 bool answerd = false;
 
 mutex write_mtx;
+mutex thread_mtx;
 bool writed = false;
 
 int id = 0;
@@ -46,7 +47,7 @@ NotificationManager *notificationManager;
 
 typedef struct new_thread_args
 {
-	void *socket;
+	int socket;
 	int sessionID;
 	bool connected;
 	char* username;
@@ -81,8 +82,8 @@ void sendMsgElection()
 void *thread_tweet_to_client(void *args)
 {
 	struct new_thread_args *arg = (struct new_thread_args *)args;
-	int n = 1, localsockfd, *newsockfd = (int *)arg->socket, session_id = arg->sessionID;
-	localsockfd = *newsockfd;
+	int n = 1, localsockfd = arg->socket, session_id = arg->sessionID;
+	
 	packet pkt;
 	string username = string(arg->username);
 
@@ -111,24 +112,26 @@ void *thread_read_client(void *args)
 {
 	struct new_thread_args *arg = (struct new_thread_args *)args;
 	pthread_t clientThread;
-	
-	void *socket = arg->socket;
+	int n, localsockfd;
+	localsockfd =arg->socket;
 	char *sessionUser;
 	Sockaddr_in socketAddress = arg->socketAddress;
 	int session_id;
 	int j;
-	int n, localsockfd, *newsockfd = (int *)socket;
-	localsockfd = *newsockfd;
 	char localUserName[16];
-	cout << "abrindo thread de leitura no sock: " << localsockfd <<endl;;
+	thread_mtx.unlock();
+	
 	packet pkt;
 	while (arg->connected)
 	{
 		pkt.type = -1;
 		/* read from the socket */
+		cout << "waiting to read" << endl;
 		n = read(localsockfd, &pkt, sizeof(pkt));
+		//cout << "readed - " << n << " , " << writed<< endl;
 		if (n <= 0)
 		{
+			//cout << "entrou" << endl;
 			write_mtx.lock();
 			if(writed)
 			{
@@ -290,7 +293,8 @@ void tryToConnectToServerGroup()
 
 	for (std::string line; getline(serverFile, line); ) 
 	{
-		args = (new_thread_args*) malloc(sizeof(new_thread_args));
+		
+		//cout << args <<" - ";
 		addr_str = line.substr(0, line.find("-"));
 		line.erase(0, line.find("-") + lim.length());
 		id_str = line.substr(0,line.find("-"));
@@ -316,19 +320,22 @@ void tryToConnectToServerGroup()
 		//inicia conexão com o servidor
 		if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
 		{
-			printf("ERROR connecting\n");
+			//printf("ERROR connecting\n");
 			close(sockfd);
 		}			
 		else
 		{
 			//cria thread de leitura que lida com mensagens vindas do server
+			thread_mtx.lock();
+			args = (new_thread_args*) malloc(sizeof(new_thread_args));
+			args->socket = sockfd;
+			args->connected = true;	
 			pthread_create(&clientThread, NULL, thread_read_client, (void*) args);
-			cout <<"connected to " << addr_str  <<" ID " << id_str <<" socket: " << sockfd << endl;
+			
 			countConnected +=1;
 			serverSocketList.push_back(sockfd);
 			socketToId[sockfd] = stoi(id_str);
-			args->socket = &sockfd;
-			args->connected = true;	
+			
 		}
 			
 		
@@ -344,7 +351,7 @@ void tryToConnectToServerGroup()
 	{
 		strcpy(pkt._payload,to_string(id).c_str());
 		write_mtx.lock();
-		writed = true;
+		//writed = true;
 		write(sock, &pkt, sizeof(pkt));
 		write_mtx.unlock();
 	}
@@ -371,7 +378,9 @@ int main(int argc, char *argv[])
 	bzero(&(serv_addr.sin_zero), 8);
 
 	if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-		printf("ERROR on binding");
+		printf("ERROR on binding\n");
+	else
+	{	
 
 	new_thread_args *args;
 	tryToConnectToServerGroup();
@@ -385,9 +394,9 @@ int main(int argc, char *argv[])
 		if ((newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen)) == -1)
 			printf("ERROR on accept");
 		memset(&pkt, 0, sizeof(pkt));
-
+		thread_mtx.lock();
 		args->socketAddress = cli_addr;
-		args->socket = &newsockfd;
+		args->socket = newsockfd;
 		args->connected = true;
 		//ver um jeito de se for server lançar a thread de leitura própria -> pode ser aqui, ou dps de fazer a conexão mandar mensagem, enfim
 
@@ -396,7 +405,7 @@ int main(int argc, char *argv[])
 		pthread_create(&clientThread, NULL, thread_read_client, (void*) args);
 		
 	}
-
+	}
 	close(sockfd);
 	return 0;
 }

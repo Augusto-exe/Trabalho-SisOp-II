@@ -117,8 +117,12 @@ void reconnectToClients()
 		arg->socket = sockfd;
 		arg->connected = true;
 		arg->sessionID = stoi(aux_session);
-		pthread_create(&clientThread, NULL, thread_read_client, (void*) arg);
+
+		cout <<"user: " << localUserName <<" socket: " <<sockfd << endl;
 		pthread_create(&clientThread, NULL, thread_tweet_to_client, (void*) arg);
+		pthread_create(&clientThread, NULL, thread_read_client, (void*) arg);
+		arg = (new_thread_args*) malloc(sizeof(new_thread_args));
+		
 	}
 	
 }
@@ -237,9 +241,9 @@ void *thread_tweet_to_client(void *args)
 {
 	struct new_thread_args *arg = (struct new_thread_args *)args;
 	int n = 1, localsockfd = arg->socket, session_id = arg->sessionID;
-	
-	packet pkt;
 	string username = string(arg->username);
+	//cout << "socket " << localsockfd << " session id " << session_id << " user " << username << endl;
+	packet pkt;
 
 	while (arg->connected)
 	{
@@ -251,9 +255,10 @@ void *thread_tweet_to_client(void *args)
 			pkt = notificationManager->consumeTweet(username,session_id);
 			write_mtx.lock();
 			writed[localsockfd] = true;
+			cout << localsockfd << endl;
 			n = write(localsockfd, &pkt, sizeof(pkt));
 			write_mtx.unlock();
-
+			cout << n << endl;
 			if (n < 0)
 				printf("ERROR writing to socket");
 		}
@@ -275,8 +280,11 @@ void *thread_read_client(void *args)
 	int session_id;
 	int j;
 	char localUserName[16];
+	if(arg->username !=NULL)
+		strcpy(localUserName,arg->username);
 	if(arg->sessionID >0)
 		session_id = arg->sessionID;
+	cout << "socket read " << localsockfd << endl;
 	thread_mtx.unlock();
 	
 	packet pkt, rcvPkt;
@@ -321,11 +329,11 @@ void *thread_read_client(void *args)
 			//caso seja de desconexão coloca connected em 0, deleta a sessão 
 			cout << "User " << localUserName << " logged out." << endl;
 			arg->connected = false;
-			sendLogoutToServers(pkt,session_id,sessionUser);
+			sendLogoutToServers(pkt,session_id,string(pkt.user));
 			if (sessionUser != NULL)
 			{
 
-			notificationManager->del_session(sessionUser,session_id);
+			notificationManager->del_session(string(pkt.user),session_id);
 			}
 			break;
 		case (TIPO_SEND):
@@ -584,6 +592,7 @@ int main(int argc, char *argv[])
 		args->socket = newsockfd;
 		args->connected = true;
 		args->sessionID = -1;
+		args->username = NULL;
 		//ver um jeito de se for server lançar a thread de leitura própria -> pode ser aqui, ou dps de fazer a conexão mandar mensagem, enfim
 
 		//cria thread de leitura que lida com mensagens vindas do cliente

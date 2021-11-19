@@ -45,8 +45,9 @@ void ClientTCP::set_sigint_callback(sighandler_t handler)
 	signal(SIGINT, handler);
 }
 
-void ClientTCP::end_connection(int signum)
+void ClientTCP::end_connection(int signum,string username)
 {
+	strcpy(disc_pkt.user,username.c_str());
 	write(sockfd, &disc_pkt, sizeof(disc_pkt));
 	connected = false;
 	close(sockfd);
@@ -114,7 +115,7 @@ bool ClientTCP::start_connection(string cliAdd)
 
 	if (bind(listenSocket, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
 	{
-		printf("1- RROR on binding - %d\n", errno);
+		printf("1- ERROR on binding - %d\n", errno);
 		exit(0);
 	}
 		
@@ -190,44 +191,47 @@ void *ClientTCP::thread_read_client(void *socket)
 	int n, localsockfd, *newsockfd = (int *)socket;
 	localsockfd = *newsockfd;
 	
-	
-	packet pkt;
-	while (connected)
+	while(true)
 	{
-		/* read from the socket */
-		n = read(localsockfd, &pkt, sizeof(pkt));
 
-		if (n <= 0) {
-			printf("[thread_read_client] ERROR reading from socket. Disconnecting...\n");
-			connected = false;
-		}
-		else
+		
+		packet pkt;
+		while (connected)
 		{
-			//caso receba pacote de notificação o exibe na tela.
-			if (pkt.type == TIPO_NOTI)
-				printf("\n\nNEW NOTIFICATION from user %s:\n%s\n\n", pkt.user, pkt._payload);
+			/* read from the socket */
+			n = read(localsockfd, &pkt, sizeof(pkt));
+
+			if (n <= 0) {
+				printf("[thread_read_client] ERROR reading from socket. Disconnecting...\n");
+				connected = false;
+			}
+			else
+			{
+				cout << "recebeu" << endl;
+				//caso receba pacote de notificação o exibe na tela.
+				if (pkt.type == TIPO_NOTI)
+					printf("\n\nNEW NOTIFICATION from user %s:\n%s\n\n", pkt.user, pkt._payload);
+			}
 		}
+
+		//if the connection was lost we wait for the new RM to connect
+		packet localPkt;
+		socklen_t clilen;
+		int newsockServer;
+		struct sockaddr_in serv_addr;
+		n = listen(listenSocket, 5);
+		clilen = sizeof(struct sockaddr_in);
+		if ((newsockServer = accept(listenSocket, (struct sockaddr *)&serv_addr, &clilen)) == -1)
+		{
+			printf("ERROR on accept %d\n",errno);
+		}		
+		memset(&localPkt, 0, sizeof(localPkt));
+		cout << "reconnected" << endl;
+		sockfd = newsockServer;;
+		localsockfd = newsockServer;
+
+		connected = true;
 	}
-
-	//if the connection was lost we wait for the new RM to connect
-	packet localPkt;
-	socklen_t clilen;
-	int newsockServer;
-	struct sockaddr_in serv_addr;
-	n = listen(listenSocket, 5);
-	clilen = sizeof(struct sockaddr_in);
-	if ((newsockServer = accept(listenSocket, (struct sockaddr *)&serv_addr, &clilen)) == -1)
-	{
-		printf("ERROR on accept %d\n",errno);
-	}		
-	memset(&localPkt, 0, sizeof(localPkt));
-	cout << "reconnected" << endl;
-	sockfd = newsockServer;
-	if(localsockfd != listenSocket)
-		close(localsockfd);
-	localsockfd = newsockServer;
-
-	connected = true;
 
 
 	return 0;

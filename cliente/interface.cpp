@@ -7,13 +7,14 @@
 
 using namespace std;
 extern int connected;
+string user;
 
 ClientTCP *clienteTCP;
 
 void signal_callback_handler(int signum)
 {
     printf("\nDesconectando \n");
-    clienteTCP->end_connection(signum);
+    clienteTCP->end_connection(signum, user);
 }
 
 bool IniciarSessao(char *perfil, char *end_servidor, char *porta,string clientAddr)
@@ -73,7 +74,7 @@ int main(int argc, char *argv[])
         char *end_servidor = argv[2];
         char *porta = argv[3];
         string clientAddr = string(argv[4]);
-
+        user = string(perfil);
         if (string(perfil).length() > 16)
         {
             cout << "Username nao pode exceder 16 caracteres." << endl;

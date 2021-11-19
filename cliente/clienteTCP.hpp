@@ -25,7 +25,7 @@ class ClientTCP
 	public:
 		ClientTCP(char *_perfil, char *_end_servidor, char *_porta);
 		void set_sigint_callback(sighandler_t handler);
-		void end_connection(int signum);
+		void end_connection(int signum,string username);
 		bool start_connection(string cliAdd);
 		void send_message(string message, string username, int seqn, int messageType);
 		void sendPendingMessages();

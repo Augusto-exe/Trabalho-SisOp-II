@@ -34,7 +34,7 @@ bool answerd = false;
 
 mutex write_mtx;
 mutex thread_mtx;
-bool writed = false;
+map <int,bool> writed;
 
 int id = 0;
 int leaderId = -1;
@@ -54,6 +54,23 @@ typedef struct new_thread_args
 	struct sockaddr_in socketAddress;
 } new_thread_args;
 
+void sendAnsMsg(int socket)
+{
+	int n;
+	packet pkt;
+	pkt.type = TIPO_SERVER_ANS;
+	strcpy(pkt._payload, to_string(id).c_str());
+	strcpy(pkt.user, "server");
+	//cout << "mandando msg de coord - socket: "<< socket << endl;
+	
+	write_mtx.lock();
+	writed[socket] = true;
+	write(socket, &pkt, sizeof(pkt));
+	write_mtx.unlock();
+	if (n < 0)
+		printf("ERROR writing to socket");
+}
+
 void sendCoordMsg(int socket)
 {
 	int n;
@@ -61,22 +78,56 @@ void sendCoordMsg(int socket)
 	pkt.type = TIPO_SERVER_COORD;
 	strcpy(pkt._payload, to_string(id).c_str());
 	strcpy(pkt.user, "server");
-	cout << "mandando msg de coord - socket: "<< socket << endl;
-	if (n < 0)
-		printf("ERROR writing to socket");
+	//cout << "mandando msg de coord - socket: "<< socket << endl;
+	
 	write_mtx.lock();
-	writed = true;
+	writed[socket] = true;
 	write(socket, &pkt, sizeof(pkt));
 	write_mtx.unlock();
+	if (n < 0)
+		printf("ERROR writing to socket");
 }
 void sendMsgCoordAll()
 {
+	int n;
+	packet pkt;
+	pkt.type = TIPO_SERVER_COORD;
+	strcpy(pkt._payload, to_string(id).c_str());
+	strcpy(pkt.user, "server");
+	//cout << "mandando msg de coord - socket: "<< socket << endl;
+	for(auto socket : serverSocketList)
+	{
+		write_mtx.lock();
+		writed[socket] = true;
+		n = write(socket, &pkt, sizeof(pkt));
+		write_mtx.unlock();
+		if (n < 0)
+			printf("ERROR writing to socket");
+	}
+
 
 }
 
 void sendMsgElection()
 {
+	int n;
+	packet pkt;
+	pkt.type = TIPO_SERVER_ELECTION;
+	strcpy(pkt._payload, to_string(id).c_str());
+	strcpy(pkt.user, "server");
+	//cout << "mandando msg de coord - socket: "<< socket << endl;
+	for(auto socket : serverSocketList)
+	{
 
+		write_mtx.lock();
+		writed[socket] = true;
+		n = write(socket, &pkt, sizeof(pkt));
+		write_mtx.unlock();
+		if (n < 0)
+			printf("ERROR writing to socket");
+		
+		
+	}
 }
 
 void *thread_tweet_to_client(void *args)
@@ -96,7 +147,7 @@ void *thread_tweet_to_client(void *args)
 			//consome tweet e envia ao cliente
 			pkt = notificationManager->consumeTweet(username,session_id);
 			write_mtx.lock();
-			writed = true;
+			writed[localsockfd] = true;
 			n = write(localsockfd, &pkt, sizeof(pkt));
 			write_mtx.unlock();
 
@@ -114,6 +165,7 @@ void *thread_read_client(void *args)
 	pthread_t clientThread;
 	int n, localsockfd;
 	localsockfd =arg->socket;
+	int electionID;
 	char *sessionUser;
 	Sockaddr_in socketAddress = arg->socketAddress;
 	int session_id;
@@ -126,23 +178,27 @@ void *thread_read_client(void *args)
 	{
 		pkt.type = -1;
 		/* read from the socket */
-		cout << "waiting to read" << endl;
+		//cout << "waiting to read" << endl;
 		n = read(localsockfd, &pkt, sizeof(pkt));
 		//cout << "readed - " << n << " , " << writed<< endl;
 		if (n <= 0)
 		{
 			//cout << "entrou" << endl;
 			write_mtx.lock();
-			if(writed)
+			if(writed[localsockfd])
 			{
 				
-				writed = false;
+				writed[localsockfd] = false;
 				
 			}
 			else
 			{
 				if(socketToId[localsockfd] == leaderId)
-					cout<< "leader disconnected";
+				{
+					electionStarted = true;
+					cout << "leader disconnected" << endl;
+				}
+					
 				cout << "ERROR reading from socket with id" << socketToId[localsockfd]<< endl;
 			}
 			write_mtx.unlock();
@@ -206,7 +262,7 @@ void *thread_read_client(void *args)
 				printf("ERROR writing to socket\n");
 			}
 			write_mtx.lock();
-			writed = true;
+			writed[localsockfd] = true;
 			n = write(localsockfd, &pkt, sizeof(pkt));
 			write_mtx.unlock();
 			break;
@@ -233,11 +289,16 @@ void *thread_read_client(void *args)
 			cout<< "LEADER: " << leaderId << endl;
 			break;
 		case(TIPO_SERVER_ANS):
-			electionStarted = false;
+			
 			answerd = true;
 			break;
 		case(TIPO_SERVER_ELECTION):
-
+			electionID = atoi(pkt._payload);
+			if(electionID < id)
+			{
+				sendAnsMsg(localsockfd);
+			}
+				
 			break;
 		case (TIPO_SERVER_ADD_SES):
 		case (TIPO_SERVER_RMV_SES):
@@ -255,8 +316,6 @@ void *thread_read_client(void *args)
 //manda mensagem pra todos os servers 
 void* electionTimeoutManager(void *args)
 {
-	if(leaderId == -1)
-		electionStarted = true;
 	while(true)
 	{
 		if(electionStarted)
@@ -267,8 +326,10 @@ void* electionTimeoutManager(void *args)
 			{
 				leaderId = id;
 				leader = true;
-				void sendMsgCoordAll();
+				answerd = false;
+				sendMsgCoordAll();
 			}
+			electionStarted = false;
 
 		}
 
@@ -351,11 +412,11 @@ void tryToConnectToServerGroup()
 	{
 		strcpy(pkt._payload,to_string(id).c_str());
 		write_mtx.lock();
-		//writed = true;
+		//writed[sock] = true;
 		write(sock, &pkt, sizeof(pkt));
 		write_mtx.unlock();
 	}
-	
+	pthread_create(&clientThread, NULL, electionTimeoutManager, NULL);
 }
 
 int main(int argc, char *argv[])

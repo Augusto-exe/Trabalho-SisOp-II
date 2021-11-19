@@ -162,7 +162,8 @@ void *ClientTCP::thread_read_client(void *socket)
 	pthread_t clientThread;
 	int n, localsockfd, *newsockfd = (int *)socket;
 	localsockfd = *newsockfd;
-
+	int listenSocket = localsockfd;
+	
 	packet pkt;
 	while (connected)
 	{
@@ -186,13 +187,17 @@ void *ClientTCP::thread_read_client(void *socket)
 	socklen_t clilen;
 	int newsockServer;
 	struct sockaddr_in serv_addr;
-	listen(sockfd, 5);
+	listen(listenSocket, 5);
 	clilen = sizeof(struct sockaddr_in);
-	if ((newsockServer = accept(sockfd, (struct sockaddr *)&serv_addr, &clilen)) == -1)
+	if ((newsockServer = accept(listenSocket, (struct sockaddr *)&serv_addr, &clilen)) == -1)
 		printf("ERROR on accept");
 	memset(&localPkt, 0, sizeof(localPkt));
 	cout << "reconnected" << endl;
 	sockfd = newsockServer;
+	if(localsockfd != listenSocket)
+		close(localsockfd);
+	localsockfd = newsockServer;
+
 	connected = true;
 
 

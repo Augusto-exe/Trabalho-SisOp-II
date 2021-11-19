@@ -54,6 +54,9 @@ typedef struct new_thread_args
 	struct sockaddr_in socketAddress;
 } new_thread_args;
 
+void *thread_tweet_to_client(void *args);
+void *thread_read_client(void *args);
+
 void sendAnsMsg(int socket)
 {
 	int n;
@@ -72,6 +75,51 @@ void sendAnsMsg(int socket)
 }
 void reconnectToClients()
 {
+	struct hostent *client;
+	struct sockaddr_in cli_addr;
+	new_thread_args* arg = (new_thread_args*) malloc(sizeof(new_thread_args));
+	int sockfd;
+	string aux_porta,aux_ip,aux_session,localUserName,aux_string,lim = "#";
+	pthread_t clientThread;
+
+	client = gethostbyname("localhost");
+	if (client == NULL)
+	{
+		fprintf(stderr, "ERROR, no such host\n");
+	}
+
+	for(auto itMap : notificationManager->sessionAddresses)
+	{
+		if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+			printf("ERROR opening socket\n");
+		aux_string = itMap.first;
+		localUserName = aux_string.substr(0, aux_string.find(lim));
+		aux_string.erase(0, aux_string.find(lim) + lim.length());
+		aux_session = aux_string.substr(0, aux_string.find(lim));
+		
+
+		cli_addr.sin_family = AF_INET;
+		cli_addr.sin_port = itMap.second.sin_port;
+		cli_addr.sin_addr = *((struct in_addr *)client->h_addr);
+		cli_addr.sin_addr.s_addr = itMap.second.sin_addr.s_addr;
+		bzero(&(cli_addr.sin_zero), 8);
+
+		//inicia conexão com o servidor
+		if (connect(sockfd, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0)
+			printf("ERROR connecting\n");
+
+		arg->username =(char*) malloc(16*sizeof(char));
+		printf("\nUser %s logged in.\n", localUserName.c_str());
+		strcpy(arg->username, localUserName.c_str());
+		arg->sessionID = stoi(aux_session);
+		thread_mtx.lock();
+		arg->socketAddress = cli_addr;
+		arg->socket = sockfd;
+		arg->connected = true;
+		arg->sessionID = stoi(aux_session);
+		pthread_create(&clientThread, NULL, thread_read_client, (void*) arg);
+		pthread_create(&clientThread, NULL, thread_tweet_to_client, (void*) arg);
+	}
 	
 }
 
@@ -227,6 +275,8 @@ void *thread_read_client(void *args)
 	int session_id;
 	int j;
 	char localUserName[16];
+	if(arg->sessionID >0)
+		session_id = arg->sessionID;
 	thread_mtx.unlock();
 	
 	packet pkt, rcvPkt;
@@ -533,6 +583,7 @@ int main(int argc, char *argv[])
 		args->socketAddress = cli_addr;
 		args->socket = newsockfd;
 		args->connected = true;
+		args->sessionID = -1;
 		//ver um jeito de se for server lançar a thread de leitura própria -> pode ser aqui, ou dps de fazer a conexão mandar mensagem, enfim
 
 		//cria thread de leitura que lida com mensagens vindas do cliente

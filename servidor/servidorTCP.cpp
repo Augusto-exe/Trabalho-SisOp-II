@@ -23,7 +23,7 @@
 #include "./notificationManager.hpp"
 
 #define PORT 4000
-#define ELECTION_TIMEOUT 3
+#define ELECTION_TIMEOUT 1
 
 using namespace std;
 
@@ -302,7 +302,6 @@ void *thread_tweet_to_client(void *args)
 			
 			sendConsumeToServers(username,session_id);
 			pkt = notificationManager->consumeTweet(username,session_id);
-			cout <<" sending tweet " <<pkt._payload << " to user " << username << endl;
 			write_mtx.lock();
 			writed[localsockfd] = true;
 			n = write(localsockfd, &pkt, sizeof(pkt));
@@ -333,7 +332,7 @@ void *thread_read_client(void *args)
 		strcpy(localUserName,arg->username);
 	if(arg->sessionID >0)
 		session_id = arg->sessionID;
-	cout << "socket read " << localsockfd << endl;
+	
 	thread_mtx.unlock();
 	
 	packet pkt, rcvPkt;
@@ -362,7 +361,7 @@ void *thread_read_client(void *args)
 					cout << "leader disconnected" << endl;
 				}
 					
-				cout << "ERROR reading from socket with id" << socketToId[localsockfd]<< endl;
+				//cout << "ERROR reading from socket with id" << socketToId[localsockfd]<< endl;
 			}
 			write_mtx.unlock();
 			arg->connected = false;
@@ -376,6 +375,7 @@ void *thread_read_client(void *args)
 		{
 		case (TIPO_DISC):
 			//caso seja de desconexão coloca connected em 0, deleta a sessão 
+			operation_mtx.lock();
 			cout << "User " << localUserName << " logged out." << endl;
 			arg->connected = false;
 			sendLogoutToServers(pkt,session_id,string(pkt.user));
@@ -384,6 +384,7 @@ void *thread_read_client(void *args)
 
 			notificationManager->del_session(string(pkt.user),session_id);
 			}
+			operation_mtx.unlock();
 			break;
 		case (TIPO_SEND):
 			//produz uma notificação de acordo com o pacote recebido
@@ -448,7 +449,7 @@ void *thread_read_client(void *args)
 		case(TIPO_SERVER):
 			serverSocketList.push_back(localsockfd);
 			socketToId[localsockfd] = atoi(pkt._payload);
-			cout<<"new server connected and added to list. ID = " << pkt._payload << " socket :"<< localsockfd<< endl;
+			//cout<<"new server connected and added to list. ID = " << pkt._payload << " socket :"<< localsockfd<< endl;
 			if(leader)
 			{
 				sendCoordMsg(localsockfd);
@@ -487,7 +488,6 @@ void *thread_read_client(void *args)
 			notificationManager->add_session_from_server(string(pkt.user),stoi(aux_sess),stoi(aux_addr),stoi(aux_port));
 			break;
 		case (TIPO_SERVER_RMV_SES):
-			cout << "deleting " << pkt.user <<" - " << pkt._payload << endl;
 			notificationManager->del_session(string(pkt.user),atoi(pkt._payload));
 			break;
 		default:
@@ -508,7 +508,6 @@ void* electionTimeoutManager(void *args)
 	{
 		if(electionStarted)
 		{
-			cout << "comecei eleicao" << endl;
 			sendMsgElection();
 			
 			sleep(ELECTION_TIMEOUT);

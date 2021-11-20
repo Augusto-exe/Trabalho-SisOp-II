@@ -1,6 +1,6 @@
 
 @augusto: @douglas
 @douglas: @pedro
-@marcos: @douglas
-@pedro: @douglas @weverton
+@marcos: @douglas @pedro
+@pedro: @douglas @weverton @marcos
 @weverton: @marcos @pedro

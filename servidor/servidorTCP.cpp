@@ -34,6 +34,8 @@ bool answerd = false;
 
 mutex write_mtx;
 mutex thread_mtx;
+mutex operation_mtx;
+
 map <int,bool> writed;
 
 int id = 0;
@@ -109,7 +111,7 @@ void reconnectToClients()
 			printf("ERROR connecting\n");
 
 		arg->username =(char*) malloc(16*sizeof(char));
-		printf("\nUser %s logged in.\n", localUserName.c_str());
+		
 		strcpy(arg->username, localUserName.c_str());
 		arg->sessionID = stoi(aux_session);
 		thread_mtx.lock();
@@ -140,8 +142,8 @@ void sendCoordMsg(int socket)
 	//writed[socket] = true;
 	write(socket, &pkt, sizeof(pkt));
 	write_mtx.unlock();
-	if (n < 0)
-		printf("ERROR writing to socket");
+	//if (n < 0)
+		//printf("ERROR writing to socket");
 }
 void sendMsgCoordAll()
 {
@@ -157,8 +159,8 @@ void sendMsgCoordAll()
 		writed[socket] = true;
 		n = write(socket, &pkt, sizeof(pkt));
 		write_mtx.unlock();
-		if (n < 0)
-			printf("ERROR writing to socket");
+		//if (n < 0)
+			//printf("ERROR writing to socket");
 	}
 
 
@@ -176,11 +178,11 @@ void sendMsgElection()
 	{
 
 		write_mtx.lock();
-		writed[socket] = true;
+		//writed[socket] = true;
 		n = write(socket, &pkt, sizeof(pkt));
 		write_mtx.unlock();
-		if (n < 0)
-			printf("ERROR writing to socket");
+		//if (n < 0)
+			//printf("ERROR writing to socket");
 		
 		
 	}
@@ -204,8 +206,8 @@ void sendLoginToservers(packet pkt,int session_id)
 		//writed[socket] = true;
 		n = write(socket, &pkt, sizeof(pkt));
 		write_mtx.unlock();
-		if (n < 0)
-			printf("ERROR writing to socket");
+		//if (n < 0)
+			//printf("ERROR writing to socket");
 		
 		
 	}
@@ -224,8 +226,8 @@ void forwardPacketsToServers(packet pkt)
 		//writed[socket] = true;
 		n = write(socket, &pkt, sizeof(pkt));
 		write_mtx.unlock();
-		if (n < 0)
-			printf("ERROR writing to socket");
+		//if (n < 0)
+			//printf("ERROR writing to socket");
 		
 		
 	}
@@ -249,8 +251,8 @@ void sendLogoutToServers(packet pkt,int session_id,string user)
 		//writed[socket] = true;
 		n = write(socket, &pkt, sizeof(pkt));
 		write_mtx.unlock();
-		if (n < 0)
-			printf("ERROR writing to socket");
+		//if (n < 0)
+			//printf("ERROR writing to socket");
 		
 		
 	}
@@ -274,8 +276,8 @@ void sendConsumeToServers(string user,int session_id)
 		writed[socket] = true;
 		n = write(socket, &pkt, sizeof(pkt));
 		write_mtx.unlock();
-		if (n < 0)
-			printf("ERROR writing to socket");
+		//if (n < 0)
+			//printf("ERROR writing to socket");
 		
 		
 	}
@@ -295,17 +297,19 @@ void *thread_tweet_to_client(void *args)
 		//verifica se precisa enviar tweet ao cliente
 		if (leader && notificationManager->needsToSend(username,session_id))
 		{ 
+			operation_mtx.lock();
 			//consome tweet e envia ao cliente
+			
 			sendConsumeToServers(username,session_id);
 			pkt = notificationManager->consumeTweet(username,session_id);
+			cout <<" sending tweet " <<pkt._payload << " to user " << username << endl;
 			write_mtx.lock();
 			writed[localsockfd] = true;
-			cout << localsockfd << endl;
 			n = write(localsockfd, &pkt, sizeof(pkt));
 			write_mtx.unlock();
-			cout << n << endl;
 			if (n < 0)
 				printf("ERROR writing to socket");
+			operation_mtx.unlock();
 		}
 	}
 
@@ -342,7 +346,7 @@ void *thread_read_client(void *args)
 		//cout << "readed - " << n << " , " << writed<< endl;
 		if (n <= 0)
 		{
-			//cout << "entrou" << endl;
+			cout << "entrou " << localsockfd <<" - " << writed[localsockfd] << endl;
 			write_mtx.lock();
 			if(writed[localsockfd])
 			{
@@ -392,7 +396,7 @@ void *thread_read_client(void *args)
 		{
 			//verifica se o usuário pode logar
 			sessionUser = strdup(pkt.user);
-
+			operation_mtx.lock();
 			session_id = notificationManager->add_session(string(sessionUser), socketAddress);
 
 			//gera pacote de resposta
@@ -429,14 +433,17 @@ void *thread_read_client(void *args)
 			//writed[localsockfd] = true;
 			n = write(localsockfd, &pkt, sizeof(pkt));
 			write_mtx.unlock();
+			operation_mtx.unlock();
 			break;
 		}
 		case (TIPO_FOLLOW):
 			// dar um follow = se adicionar a lista de seguires de alguem
 			// payload diz o 'alguem' e o user ja vem no pacote
+			operation_mtx.lock();
 			if(leader)
 				forwardPacketsToServers(pkt);
 			notificationManager->follow(string(pkt.user), string(pkt._payload),leader);
+			operation_mtx.unlock();
 			break;
 		case(TIPO_SERVER):
 			serverSocketList.push_back(localsockfd);
@@ -448,7 +455,9 @@ void *thread_read_client(void *args)
 			}
 			break;
 		case(TIPO_SERVER_CONSUME):
+			operation_mtx.lock();
 			notificationManager->consumeTweet(string(pkt.user),atoi(pkt._payload));
+			operation_mtx.unlock();
 			break;
 		case(TIPO_SERVER_COORD):
 			leaderId = atoi(pkt._payload);
@@ -499,16 +508,20 @@ void* electionTimeoutManager(void *args)
 	{
 		if(electionStarted)
 		{
+			cout << "comecei eleicao" << endl;
 			sendMsgElection();
+			
 			sleep(ELECTION_TIMEOUT);
 			if(!answerd)
 			{
+				cout << "sou lider" <<endl;
 				leaderId = id;
 				leader = true;
 				answerd = false;
 				sendMsgCoordAll();
 				reconnectToClients();
 			}
+			answerd = false;
 			electionStarted = false;
 
 		}

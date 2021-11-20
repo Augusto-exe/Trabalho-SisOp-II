@@ -349,20 +349,24 @@ int NotificationManager::add_session(string username, Sockaddr_in sessionAddress
 bool NotificationManager::del_session(string username,int session)
 {
 
-    cout << username << endl;
+    cout << username <<"-" << endl;
     // check if exist on map
     SessionMap::iterator it = this->sessionsQty.find(username);
     bool found = it != this->sessionsQty.end();
-
+    
     // if not, add it with 1
     if (!found)
     {
+        
         return true;
     }
 
     if (it->second.size() == 1)
     {
         sessionsQty.erase(username);
+        
+        sessionAddresses.erase(username+"#"+to_string(session));
+        
         return true;
     }
 
@@ -375,15 +379,17 @@ bool NotificationManager::del_session(string username,int session)
         }
     }
 
+    
     for (auto itMap = this->sessionAddresses.begin() ; itMap != this->sessionAddresses.end(); ++itMap)
     {
+        cout << (*itMap).first  << endl;
         if((*itMap).first == username+"#"+to_string(session))
         {
             this->sessionAddresses.erase(itMap);
             break;
         }
     }
- 
+    
 
     return true;
 }

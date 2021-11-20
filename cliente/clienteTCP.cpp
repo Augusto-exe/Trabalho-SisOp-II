@@ -202,7 +202,7 @@ void *ClientTCP::thread_read_client(void *socket)
 			n = read(localsockfd, &pkt, sizeof(pkt));
 
 			if (n <= 0) {
-				printf("[thread_read_client] ERROR reading from socket. Disconnecting...\n");
+				//printf("[thread_read_client] ERROR reading from socket. Disconnecting...\n");
 				connected = false;
 			}
 			else
